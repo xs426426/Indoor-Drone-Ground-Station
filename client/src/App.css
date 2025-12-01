@@ -1,0 +1,159 @@
+/* 现代化配色方案 - 清爽明亮 */
+.app-layout {
+  min-height: 100vh;
+  background: #f0f2f5;
+}
+
+.app-header {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  padding: 0 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100%;
+}
+
+.header-content h1 {
+  margin: 0;
+  color: white;
+  font-size: 20px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 6px 12px;
+  border-radius: 16px;
+}
+
+.app-content {
+  padding: 16px;
+  padding-bottom: 40px;
+  min-height: calc(100vh - 64px);
+  height: auto;
+  background: #f0f2f5;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.content-card {
+  background: white;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.content-card .ant-card-head {
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+  font-weight: 600;
+}
+
+.content-card .ant-card-body {
+  padding: 0;
+  height: calc(100% - 57px);
+}
+
+/* Ant Design 主题覆盖 */
+.ant-card {
+  background: white;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+}
+
+.ant-card-head {
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.ant-card-head-title {
+  color: #262626;
+  font-weight: 600;
+}
+
+.ant-statistic-title {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.ant-statistic-content {
+  color: #262626;
+}
+
+.ant-btn-primary {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  border: none;
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.3);
+}
+
+.ant-btn-primary:hover {
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+  box-shadow: 0 4px 8px rgba(24, 144, 255, 0.4);
+}
+
+.ant-btn-danger {
+  box-shadow: 0 2px 4px rgba(255, 77, 79, 0.3);
+}
+
+.ant-btn-danger:hover {
+  box-shadow: 0 4px 8px rgba(255, 77, 79, 0.4);
+}
+
+/* 描述列表样式 */
+.ant-descriptions-item-label {
+  background: #fafafa;
+  font-weight: 500;
+}
+
+/* Tag 样式 */
+.ant-tag {
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+/* 视频播放器样式 */
+.video-player {
+  width: 100%;
+  height: 100%;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.video-player img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.video-placeholder {
+  color: #8c8c8c;
+  font-size: 16px;
+}
+
+/* Collapse 样式优化 */
+.ant-collapse {
+  background: white;
+  border: 1px solid #f0f0f0;
+}
+
+.ant-collapse-header {
+  font-weight: 500;
+}

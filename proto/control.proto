@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package daf.control;
+
+enum Action {
+    STOP = 0;
+    START = 1;
+    RESTART = 2;
+}
+
+message Command {
+    string module = 1;
+    Action action = 2;
+}

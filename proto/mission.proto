@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package daf.mission;
+
+import "common.proto";
+import "camera.proto";
+
+message AutoPilot {
+    Vector3f position = 1;         // 位置
+    float yaw = 2;                 // 航向
+    CameraParam camera_param = 11; // 相机参数
+}
+
+message Line {
+    Vector3f start = 1; // 起点
+    Vector3f end = 2;   // 终点
+    enum YawMode {
+        FIXED = 0;  // 固定航向
+        TARGET = 1; // 指向目标
+    }
+    YawMode yaw_mode = 3;
+    float yaw_fixed = 4;           // 固定航向
+    Vector3f yaw_target = 5;       // 指向目标
+    float max_speed = 6;           // 最大速度6
+    float max_accel = 7;           // 最大加速度
+    CameraParam camera_param = 11; // 相机参数
+}
+
+message TakeOff {}
+
+message Land {}
+
+message Task {
+    oneof task_type {
+        TakeOff take_off = 1;     // 起飞
+        Land land = 2;            // 降落
+        AutoPilot auto_pilot = 3; // 自主飞行
+        Line line = 4;            // 线段
+    }
+}
+
+message Mission {
+    string id = 1;           // 任务ID
+    repeated Task tasks = 2; // 任务列表
+}
+
+message Execution {
+    string id = 1; // 任务ID
+    enum Action {
+        START = 0;  // 开始任务
+        PAUSE = 1;  // 暂停任务
+        RESUME = 2; // 恢复任务
+        STOP = 3;   // 停止任务
+        CLEAR = 4;  // 清除任务
+    }
+    Action action = 2; // 执行动作
+}
+
+message Receipt {
+    string id = 1; // 任务ID
+}
+
+message Status {
+    enum State {
+        INIT = 0;
+        WAIT = 1;
+        DISPATCH = 2;
+        STOP = 3;
+        ROTATE = 4;
+        ESCAPT = 5;
+        PLAN = 6;
+        REPLAN = 7;
+        LINE = 8;
+        CIRCLE = 9;
+    }
+    State state = 2;       // 任务状态
+    uint32 queue_size = 3; // 任务队列大小
+}

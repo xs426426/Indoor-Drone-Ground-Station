@@ -1,0 +1,29 @@
+{
+  "name": "drone-web-control",
+  "version": "1.0.0",
+  "description": "Web-based drone control system with MQTT and Protobuf",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "node server/index.js",
+    "client": "cd client && npm start",
+    "simulator": "node server/simulator.js",
+    "zzxl": "node server/zzxl-simulator.js",
+    "test-full": "concurrently \"npm run zzxl\" \"npm run server\" \"npm run client\"",
+    "proto": "node scripts/compile-proto.js",
+    "install-all": "npm install && cd client && npm install"
+  },
+  "keywords": ["drone", "mqtt", "protobuf", "websocket"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "mqtt": "^5.3.5",
+    "protobufjs": "^7.2.6",
+    "ws": "^8.16.0",
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

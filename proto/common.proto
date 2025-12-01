@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package daf;
+
+message TimeStamp {
+    uint32 sec = 1;
+    uint32 nsec = 2; // ns, 默认为0
+}
+
+message Vector3f {
+    float x = 1;
+    float y = 2;
+    float z = 3;
+}
+
+message Vector3d {
+    double x = 1;
+    double y = 2;
+    double z = 3;
+}
+
+message Quaternionf {
+    float x = 1;
+    float y = 2;
+    float z = 3;
+    float w = 4;
+}
+
+message Quaterniond {
+    double x = 1;
+    double y = 2;
+    double z = 3;
+    double w = 4;
+}
+
+message Location {
+    double latitude = 1;
+    double longitude = 2;
+    double altitude = 3;
+}
+
+message Orientation {
+    double roll = 1;
+    double pitch = 2;
+    double yaw = 3;
+}
+
+message LocalOdometry {
+    TimeStamp stamp = 1;
+    Quaternionf orientation = 2;
+    Vector3f position = 3;
+    Vector3f velocity = 4;
+    string frame = 5;
+}

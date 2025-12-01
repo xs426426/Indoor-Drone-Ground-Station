@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package daf;
+
+import "common.proto";
+import "mission.proto";
+
+message Command {
+    enum Action {
+        TAKE_OFF = 0; // 起飞
+        LAND = 1;     // 着陆
+    }
+    Action action = 1; // 起飞或着陆
+}
+
+enum Status {
+    OK = 0;
+    ERR = 1;
+}
+
+message FlightControl {
+    Status status = 1;
+    enum Mode {
+        INIT = 0;     // 初始化
+        MANUAL = 1;   // 手工操作
+        HOVER = 2;    // 悬停
+        AUTO = 3;     // 任务模式，自主导航
+        TAKE_OFF = 4; // 起飞
+        LAND = 5;     // 降落
+        CRUISE = 6;   // 巡航
+        ORBIT = 7;    // 环绕
+    }
+    Mode mode = 2; // 飞行模式
+}
+
+message Lidar { Status status = 1; }
+
+message FPVCamera { Status status = 1; }
+
+message Heartbeat {
+    TimeStamp stamp = 1;               // 生成时间，精确到秒
+    uint32 seqence_id = 2;             // 消息序号，自增
+    string sn = 3;                     // 无人机设备编号
+    Vector3f position = 4;             // 位置
+    Vector3f velocity = 5;             // 速度
+    Orientation orientation = 6;       // 姿态
+    FlightControl flight_control = 11; // 飞行模式
+    Lidar lidar = 12;                  // 激光雷达
+    FPVCamera fpv_camera = 13;         // 第一视角相机，定焦
+    mission.Status mission_state = 14; // 任务状态
+}

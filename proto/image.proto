@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package daf;
+
+import "common.proto";
+
+message Image {
+    TimeStamp stamp = 1;
+    string format = 2;
+    bytes data = 3;
+}

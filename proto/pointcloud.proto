@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package daf;
+
+import "common.proto";
+
+enum Type {
+    XYZ = 0;       // 位置
+    INTENSITY = 1; // 反射率
+    RGB = 2;
+}
+
+message Point {
+    Vector3f xyz = 1;
+    uint32 intensity = 2; // 反射率，0-255
+    uint32 rgb = 3;
+}
+
+message PointCloud {
+    TimeStamp stamp = 1;
+    uint32 sequence_no = 2;    // 消息序号，自增
+    uint32 type = 3;           // 点云类型
+    repeated Point points = 4; // 数组
+}

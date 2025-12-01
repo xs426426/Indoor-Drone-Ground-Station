@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package daf;
+
+message CameraParam {
+    bool on = 1; // 是否打开相机
+    enum Mode {
+        PHOTO = 0; // 拍照
+        VIDEO = 1; // 录像
+    }
+    Mode mode = 2;      // 模式
+    float interval = 3; // 间隔时间，单位ms
+}
