@@ -411,8 +411,10 @@ async function start() {
     // 1. 初始化 Protobuf
     await protoHandler.init();
 
-    // 2. 连接 MQTT
-    await mqttClient.connect();
+    // 2. 连接 MQTT（异步，失败不阻止服务器启动）
+    mqttClient.connect().catch(err => {
+      console.warn('⚠️ MQTT初始连接失败，将自动重连:', err.message);
+    });
 
     // 3. 初始化探索引擎
     explorationEngine = new ExplorationEngine(mqttClient);
