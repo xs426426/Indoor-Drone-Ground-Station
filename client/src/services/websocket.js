@@ -16,7 +16,7 @@ class WebSocketService {
   /**
    * 连接 WebSocket 服务器
    */
-  connect(url = 'ws://localhost:3001') {
+  connect(url = `ws://${window.location.host}/ws`) {
     if (this.ws) {
       return;
     }

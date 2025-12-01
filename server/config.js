@@ -1,7 +1,7 @@
 module.exports = {
   // MQTT 连接配置
   mqtt: {
-    broker: '10.42.0.1',  // 无人机默认 IP
+    broker: process.env.MQTT_BROKER || 'localhost',  // 云端默认localhost，本地10.42.0.1
     port: 1883,
     clientId: 'drone_web_control_' + Math.random().toString(16).substr(2, 8)
   },
@@ -13,7 +13,7 @@ module.exports = {
 
   // HTTP 服务器配置
   http: {
-    port: 3001
+    port: process.env.PORT || 3000
   },
 
   // 订阅的话题列表

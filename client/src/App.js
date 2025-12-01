@@ -34,7 +34,7 @@ function App() {
     websocket.connect();
 
     // 获取服务器状态（包括运行模式）
-    fetch('http://localhost:3001/api/status')
+    fetch('/api/status')
       .then(res => res.json())
       .then(data => {
         if (data.mode) {
