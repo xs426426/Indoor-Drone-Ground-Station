@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Card, Upload, Button, message, Space, InputNumber, Row, Col } from 'antd';
-import { UploadOutlined, EnvironmentOutlined, RocketOutlined } from '@ant-design/icons';
+import { UploadOutlined, EnvironmentOutlined, RocketOutlined, DownloadOutlined } from '@ant-design/icons';
 
 /**
  * 点云文件加载器组件
  */
-function PointCloudLoader({ onPointCloudLoaded, onStartPositionSet }) {
+function PointCloudLoader({ onPointCloudLoaded, onStartPositionSet, accumulatedPointCloud }) {
   const [loading, setLoading] = useState(false);
   const [fileInfo, setFileInfo] = useState(null);
   const [startPosition, setStartPosition] = useState({ x: 0, y: 0, z: 1.5 });
@@ -208,13 +208,103 @@ function PointCloudLoader({ onPointCloudLoaded, onStartPositionSet }) {
     message.info('点云已清空');
   };
 
+  /**
+   * 保存当前3D视图中的累积点云为PCD文件
+   */
+  const handleSavePointCloud = () => {
+    // 检查是否有累积的点云数据
+    if (!accumulatedPointCloud || !accumulatedPointCloud.history || accumulatedPointCloud.history.length === 0) {
+      message.warning('当前没有可保存的点云数据');
+      return;
+    }
+
+    const { history, totalPoints } = accumulatedPointCloud;
+
+    // 合并所有历史帧的点云数据
+    let allPoints = [];
+    history.forEach(frame => {
+      if (frame.points) {
+        allPoints = allPoints.concat(frame.points);
+      }
+    });
+
+    if (allPoints.length === 0) {
+      message.warning('点云数据为空');
+      return;
+    }
+
+    message.loading('正在生成PCD文件...', 0);
+
+    try {
+      // 生成PCD文件内容
+      const pcdContent = generatePCDContent(allPoints);
+
+      // 创建Blob并下载
+      const blob = new Blob([pcdContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+
+      // 生成文件名（带时间戳）
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const filename = `pointcloud_${timestamp}.pcd`;
+
+      // 创建下载链接并触发下载
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // 释放URL
+      URL.revokeObjectURL(url);
+
+      message.destroy();
+      message.success(`点云已保存: ${filename} (${allPoints.length.toLocaleString()} 个点)`);
+    } catch (error) {
+      message.destroy();
+      message.error('保存失败: ' + error.message);
+      console.error('保存点云失败:', error);
+    }
+  };
+
+  /**
+   * 生成PCD文件内容
+   */
+  const generatePCDContent = (points) => {
+    // PCD文件头
+    const header = [
+      '# .PCD v0.7 - Point Cloud Data file format',
+      'VERSION 0.7',
+      'FIELDS x y z intensity',
+      'SIZE 4 4 4 4',
+      'TYPE F F F U',
+      'COUNT 1 1 1 1',
+      `WIDTH ${points.length}`,
+      'HEIGHT 1',
+      'VIEWPOINT 0 0 0 1 0 0 0',
+      `POINTS ${points.length}`,
+      'DATA ascii'
+    ].join('\n');
+
+    // 点云数据
+    const data = points.map(point => {
+      const x = point.xyz?.x ?? point.x ?? 0;
+      const y = point.xyz?.y ?? point.y ?? 0;
+      const z = point.xyz?.z ?? point.z ?? 0;
+      const intensity = point.intensity ?? 128;
+      return `${x.toFixed(6)} ${y.toFixed(6)} ${z.toFixed(6)} ${Math.floor(intensity)}`;
+    }).join('\n');
+
+    return header + '\n' + data;
+  };
+
   return (
     <Card
       title={<><UploadOutlined /> 点云场景加载</>}
       className="content-card"
     >
       <Space direction="vertical" style={{ width: '100%' }} size="large">
-        {/* 文件上传和清空按钮 */}
+        {/* 文件上传、保存和清空按钮 */}
         <Space direction="horizontal" style={{ width: '100%' }} size="small">
           <Upload
             accept=".pcd"
@@ -229,9 +319,18 @@ function PointCloudLoader({ onPointCloudLoaded, onStartPositionSet }) {
               size="large"
               block
             >
-              {fileInfo ? '重新加载' : '选择点云文件'}
+              {fileInfo ? '重新加载' : '加载点云'}
             </Button>
           </Upload>
+          <Button
+            icon={<DownloadOutlined />}
+            size="large"
+            onClick={handleSavePointCloud}
+            disabled={!accumulatedPointCloud || accumulatedPointCloud.totalPoints === 0}
+            title={accumulatedPointCloud?.totalPoints > 0 ? `保存 ${accumulatedPointCloud.totalPoints.toLocaleString()} 个点` : '暂无点云数据'}
+          >
+            保存点云
+          </Button>
           {fileInfo && (
             <Button
               danger

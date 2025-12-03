@@ -246,7 +246,7 @@ function Scene({ pointCloudHistory, odometry, maxPoints }) {
 /**
  * 点云视图主组件
  */
-export default function PointCloudViewer({ pointCloud, odometry }) {
+export default function PointCloudViewer({ pointCloud, odometry, onPointCloudHistoryChange }) {
   const [pointCloudHistory, setPointCloudHistory] = useState([]);
   const [isPaused, setIsPaused] = useState(false);
   const [maxPoints, setMaxPoints] = useState(500000); // 最大显示50万个点
@@ -288,6 +288,13 @@ export default function PointCloudViewer({ pointCloud, odometry }) {
       }
     }
   }, [pointCloud, isPaused, maxPoints, totalPoints, pointCloudHistory.length]);
+
+  // 当点云历史变化时，通知父组件
+  useEffect(() => {
+    if (onPointCloudHistoryChange) {
+      onPointCloudHistoryChange(pointCloudHistory, totalPoints);
+    }
+  }, [pointCloudHistory, totalPoints, onPointCloudHistoryChange]);
 
   const handleClear = () => {
     setPointCloudHistory([]);

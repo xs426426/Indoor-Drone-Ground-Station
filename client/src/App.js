@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Layout, Card, Row, Col, Button, message, Badge, Statistic } from 'antd';
-import { CloudOutlined, RocketOutlined, VideoCameraOutlined } from '@ant-design/icons';
+import { useEffect, useState } from 'react';
+import { Layout, Card, Row, Col, message, Badge, Statistic } from 'antd';
+import { CloudOutlined, RocketOutlined } from '@ant-design/icons';
 import websocket from './services/websocket';
 import PointCloudViewer from './components/PointCloudViewer';
 import PointCloudLoader from './components/PointCloudLoader';
@@ -22,6 +22,7 @@ function App() {
   const [cameraData, setCameraData] = useState(null);
   const [isExploring, setIsExploring] = useState(false); // 是否正在探索
   const [droneMode, setDroneMode] = useState('auto'); // 'real', 'simulator', 'auto'
+  const [accumulatedPointCloud, setAccumulatedPointCloud] = useState({ history: [], totalPoints: 0 }); // 累积的点云数据
   const [stats, setStats] = useState({
     pointCount: 0,
     heartbeatCount: 0,
@@ -154,6 +155,13 @@ function App() {
     console.log('✅ 设置无人机起点:', newOdometry.position);
   };
 
+  /**
+   * 处理累积点云数据变化
+   */
+  const handlePointCloudHistoryChange = (history, totalPoints) => {
+    setAccumulatedPointCloud({ history, totalPoints });
+  };
+
   // 显示逻辑：优先显示本地点云，如果没有则显示MQTT实时点云
   const displayPointCloud = localPointCloud || pointCloud;
 
@@ -190,7 +198,11 @@ function App() {
                     className="content-card"
                     style={{ height: 600 }}
                   >
-                    <PointCloudViewer pointCloud={displayPointCloud} odometry={odometry} />
+                    <PointCloudViewer
+                      pointCloud={displayPointCloud}
+                      odometry={odometry}
+                      onPointCloudHistoryChange={handlePointCloudHistoryChange}
+                    />
                   </Card>
                 </Col>
 
@@ -245,6 +257,7 @@ function App() {
                 <PointCloudLoader
                   onPointCloudLoaded={handlePointCloudLoaded}
                   onStartPositionSet={handleStartPositionSet}
+                  accumulatedPointCloud={accumulatedPointCloud}
                 />
 
                 {/* 无人机状态 */}
