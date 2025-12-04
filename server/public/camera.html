@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>摄像头实时视频</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    h1 {
+      color: #4fc3f7;
+      margin-bottom: 20px;
+      font-size: 24px;
+    }
+    #videoContainer {
+      position: relative;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    #videoFrame {
+      max-width: 90vw;
+      max-height: 70vh;
+      display: block;
+    }
+    #noSignal {
+      width: 640px;
+      height: 480px;
+      max-width: 90vw;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #666;
+      font-size: 18px;
+      background: #111;
+    }
+    #status {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 6px 12px;
+      border-radius: 15px;
+      font-size: 12px;
+    }
+    #status.connected { background: #4caf50; }
+    #status.disconnected { background: #f44336; }
+    #info {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.7);
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    #info span { margin-right: 15px; }
+    #info .label { color: #888; }
+    #info .value { color: #4fc3f7; }
+    #controls {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+    }
+    #controls button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: opacity 0.2s;
+    }
+    #controls button:hover { opacity: 0.8; }
+    #controls button.primary { background: #4fc3f7; color: #000; }
+    #controls button.secondary { background: #444; color: #fff; }
+    #fullscreenBtn {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.5);
+      border: none;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>摄像头实时视频</h1>
+
+  <div id="videoContainer">
+    <div id="noSignal">等待视频信号...</div>
+    <img id="videoFrame" style="display: none;" alt="Camera Feed">
+    <div id="status" class="disconnected">未连接</div>
+    <button id="fullscreenBtn">全屏</button>
+    <div id="info">
+      <span><span class="label">FPS: </span><span class="value" id="fps">0</span></span>
+      <span><span class="label">帧数: </span><span class="value" id="frameCount">0</span></span>
+      <span><span class="label">分辨率: </span><span class="value" id="resolution">-</span></span>
+    </div>
+  </div>
+
+  <div id="controls">
+    <button class="primary" id="pauseBtn">暂停</button>
+    <button class="secondary" id="screenshotBtn">截图</button>
+  </div>
+
+  <script>
+    // 配置
+    const WS_URL = `ws://${window.location.host}`;
+
+    // 状态
+    let ws = null;
+    let isPaused = false;
+    let frameCount = 0;
+    let lastFpsTime = Date.now();
+    let fpsFrameCount = 0;
+
+    // 元素
+    const videoFrame = document.getElementById('videoFrame');
+    const noSignal = document.getElementById('noSignal');
+    const statusEl = document.getElementById('status');
+    const fpsEl = document.getElementById('fps');
+    const frameCountEl = document.getElementById('frameCount');
+    const resolutionEl = document.getElementById('resolution');
+
+    // WebSocket 连接
+    function connectWebSocket() {
+      ws = new WebSocket(WS_URL);
+
+      ws.onopen = () => {
+        statusEl.className = 'connected';
+        statusEl.textContent = '已连接';
+        console.log('WebSocket 已连接');
+      };
+
+      ws.onclose = () => {
+        statusEl.className = 'disconnected';
+        statusEl.textContent = '已断开';
+        console.log('WebSocket 已断开，5秒后重连...');
+        setTimeout(connectWebSocket, 5000);
+      };
+
+      ws.onerror = (err) => {
+        console.error('WebSocket 错误:', err);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          handleMessage(msg);
+        } catch (e) {
+          console.error('消息解析错误:', e);
+        }
+      };
+    }
+
+    function handleMessage(msg) {
+      if (msg.type === 'mqtt_message' && msg.topic === '/daf/camera' && !isPaused) {
+        const data = msg.data;
+        if (data && data.data) {
+          displayFrame(data);
+        }
+      }
+    }
+
+    function displayFrame(data) {
+      // 构建图片URL
+      let imgSrc;
+      const encoding = data.encoding || 'jpeg';
+
+      if (encoding === 'jpeg' || encoding === 'png') {
+        imgSrc = `data:image/${encoding};base64,${data.data}`;
+      } else if (encoding === 'rgb8' || encoding === 'bgr8') {
+        // RGB/BGR 原始数据需要特殊处理，这里简化处理
+        imgSrc = `data:image/jpeg;base64,${data.data}`;
+      } else {
+        imgSrc = `data:image/jpeg;base64,${data.data}`;
+      }
+
+      // 显示图片
+      videoFrame.src = imgSrc;
+      videoFrame.style.display = 'block';
+      noSignal.style.display = 'none';
+
+      // 更新统计
+      frameCount++;
+      frameCountEl.textContent = frameCount;
+      fpsFrameCount++;
+
+      // 获取分辨率
+      videoFrame.onload = () => {
+        resolutionEl.textContent = `${videoFrame.naturalWidth}x${videoFrame.naturalHeight}`;
+      };
+    }
+
+    // FPS 计算
+    setInterval(() => {
+      fpsEl.textContent = fpsFrameCount;
+      fpsFrameCount = 0;
+    }, 1000);
+
+    // 暂停/继续
+    document.getElementById('pauseBtn').addEventListener('click', function() {
+      isPaused = !isPaused;
+      this.textContent = isPaused ? '继续' : '暂停';
+      if (isPaused) {
+        noSignal.textContent = '已暂停';
+      } else {
+        noSignal.textContent = '等待视频信号...';
+      }
+    });
+
+    // 截图
+    document.getElementById('screenshotBtn').addEventListener('click', () => {
+      if (videoFrame.style.display === 'none') {
+        alert('暂无视频画面');
+        return;
+      }
+
+      // 创建Canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = videoFrame.naturalWidth;
+      canvas.height = videoFrame.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(videoFrame, 0, 0);
+
+      // 下载
+      const link = document.createElement('a');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      link.download = `screenshot_${timestamp}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+
+    // 全屏
+    document.getElementById('fullscreenBtn').addEventListener('click', () => {
+      const container = document.getElementById('videoContainer');
+      if (container.requestFullscreen) {
+        container.requestFullscreen();
+      } else if (container.webkitRequestFullscreen) {
+        container.webkitRequestFullscreen();
+      }
+    });
+
+    // 初始化
+    connectWebSocket();
+  </script>
+</body>
+</html>

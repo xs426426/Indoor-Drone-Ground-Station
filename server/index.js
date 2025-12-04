@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const cors = require('cors');
+const path = require('path');
 const config = require('./config');
 const mqttClient = require('./mqtt-client');
 const protoHandler = require('./proto-handler');
@@ -20,6 +21,9 @@ const DRONE_MODE = process.env.DRONE_MODE || 'auto'; // 'real', 'simulator', 'au
 // 中间件
 app.use(cors());
 app.use(express.json());
+
+// 静态文件服务 - 提供独立页面访问
+app.use('/static', express.static(path.join(__dirname, 'public')));
 
 // HTTP API 路由
 app.get('/api/status', (req, res) => {
