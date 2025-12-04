@@ -8,77 +8,178 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #1a1a2e;
-      color: #fff;
+      background: #0d1117;
+      color: #e6edf3;
       overflow: hidden;
     }
     #container { width: 100vw; height: 100vh; }
-    #info {
+
+    /* 顶部工具栏 */
+    #toolbar {
       position: absolute;
-      top: 10px;
-      left: 10px;
-      background: rgba(0,0,0,0.8);
-      padding: 15px 20px;
-      border-radius: 8px;
-      font-size: 14px;
-      z-index: 100;
-      min-width: 220px;
-      border: 1px solid #333;
-    }
-    #info h3 { margin-bottom: 12px; color: #4fc3f7; font-size: 16px; }
-    #info .stat { margin: 8px 0; display: flex; justify-content: space-between; }
-    #info .label { color: #888; }
-    #info .value { color: #4fc3f7; font-weight: bold; }
-    #status {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: bold;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 50px;
+      background: rgba(22, 27, 34, 0.95);
+      border-bottom: 1px solid #30363d;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
       z-index: 100;
     }
-    #status.connected { background: #4caf50; color: #fff; }
-    #status.disconnected { background: #f44336; color: #fff; }
-    #status.connecting { background: #ff9800; color: #fff; }
-    #controls {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      background: rgba(0,0,0,0.8);
-      padding: 15px;
-      border-radius: 8px;
-      z-index: 100;
-      border: 1px solid #333;
+    #toolbar .left { display: flex; align-items: center; gap: 16px; }
+    #toolbar .title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #58a6ff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    #controls button {
-      padding: 10px 20px;
-      margin: 0 5px;
-      border: none;
+    #toolbar .right { display: flex; align-items: center; gap: 12px; }
+
+    /* 按钮样式 */
+    .btn {
+      padding: 6px 12px;
+      border: 1px solid #30363d;
       border-radius: 6px;
+      background: #21262d;
+      color: #c9d1d9;
+      font-size: 13px;
       cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
     }
-    #controls button.primary { background: #4fc3f7; color: #000; }
-    #controls button.danger { background: #f44336; color: #fff; }
-    #controls button:hover { transform: scale(1.05); opacity: 0.9; }
-    #controls button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn:hover { background: #30363d; border-color: #8b949e; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn.primary { background: #238636; border-color: #238636; color: #fff; }
+    .btn.primary:hover { background: #2ea043; }
+    .btn.danger { background: #da3633; border-color: #da3633; color: #fff; }
+    .btn.danger:hover { background: #f85149; }
+    .btn.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+
+    /* 连接状态 */
+    #status {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    #status.connected { background: #238636; color: #fff; }
+    #status.disconnected { background: #da3633; color: #fff; }
+    #status.connecting { background: #9e6a03; color: #fff; }
+
+    /* 左侧信息面板 */
+    #infoPanel {
+      position: absolute;
+      top: 60px;
+      left: 10px;
+      width: 200px;
+      background: rgba(22, 27, 34, 0.92);
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 12px;
+      z-index: 90;
+    }
+    #infoPanel h4 {
+      font-size: 12px;
+      color: #8b949e;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid #21262d;
+      font-size: 13px;
+    }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-row .label { color: #8b949e; }
+    .stat-row .value { color: #58a6ff; font-weight: 600; font-family: monospace; }
+
+    /* 右侧控制面板 */
+    #controlPanel {
+      position: absolute;
+      top: 60px;
+      right: 10px;
+      width: 180px;
+      background: rgba(22, 27, 34, 0.92);
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 12px;
+      z-index: 90;
+    }
+    #controlPanel h4 {
+      font-size: 12px;
+      color: #8b949e;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    #controlPanel .control-group {
+      margin-bottom: 12px;
+    }
+    #controlPanel .control-group:last-child { margin-bottom: 0; }
+    #controlPanel label {
+      display: block;
+      font-size: 11px;
+      color: #8b949e;
+      margin-bottom: 4px;
+    }
+    #controlPanel input[type="range"] {
+      width: 100%;
+      height: 4px;
+      background: #30363d;
+      border-radius: 2px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    #controlPanel input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #58a6ff;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    #controlPanel .range-value {
+      font-size: 11px;
+      color: #58a6ff;
+      text-align: right;
+      margin-top: 2px;
+    }
+    #controlPanel .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    #controlPanel .btn { width: 100%; justify-content: center; }
+
+    /* 底部提示 */
     #hint {
       position: absolute;
-      bottom: 20px;
-      right: 20px;
-      background: rgba(0,0,0,0.8);
-      padding: 12px 16px;
-      border-radius: 8px;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(22, 27, 34, 0.9);
+      border: 1px solid #30363d;
+      padding: 8px 16px;
+      border-radius: 6px;
       font-size: 12px;
-      color: #888;
-      z-index: 100;
-      border: 1px solid #333;
+      color: #8b949e;
+      display: flex;
+      gap: 20px;
+      z-index: 90;
     }
-    #hint p { margin: 4px 0; }
+    #hint span { display: flex; align-items: center; gap: 4px; }
+
+    /* 加载动画 */
     #loading {
       position: absolute;
       top: 50%;
@@ -89,15 +190,18 @@
     }
     #loading.hidden { display: none; }
     .spinner {
-      width: 50px;
-      height: 50px;
-      border: 4px solid #333;
-      border-top-color: #4fc3f7;
+      width: 40px;
+      height: 40px;
+      border: 3px solid #30363d;
+      border-top-color: #58a6ff;
       border-radius: 50%;
       animation: spin 1s linear infinite;
-      margin: 0 auto 15px;
+      margin: 0 auto 12px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 文件上传隐藏 */
+    #fileInput { display: none; }
   </style>
 </head>
 <body>
@@ -108,70 +212,128 @@
     <div>正在加载3D场景...</div>
   </div>
 
-  <div id="info">
-    <h3>📡 点云实时显示</h3>
-    <div class="stat"><span class="label">总点数</span><span class="value" id="totalPoints">0</span></div>
-    <div class="stat"><span class="label">累计帧数</span><span class="value" id="frameCount">0</span></div>
-    <div class="stat"><span class="label">渲染FPS</span><span class="value" id="fps">0</span></div>
-    <div class="stat"><span class="label">无人机位置</span><span class="value" id="dronePos">等待数据...</span></div>
+  <!-- 顶部工具栏 -->
+  <div id="toolbar">
+    <div class="left">
+      <div class="title">
+        <span>☁️</span>
+        <span>点云实时显示</span>
+      </div>
+      <div id="status" class="connecting">连接中...</div>
+    </div>
+    <div class="right">
+      <input type="file" id="fileInput" accept=".pcd">
+      <button class="btn" id="loadBtn" title="加载本地PCD文件">
+        <span>📂</span> 加载点云
+      </button>
+      <button class="btn primary" id="saveBtn" title="保存当前点云为PCD文件" disabled>
+        <span>💾</span> 保存点云
+      </button>
+      <button class="btn" id="pauseBtn" title="暂停/继续接收数据">
+        <span>⏸</span> 暂停
+      </button>
+      <button class="btn danger" id="clearBtn" title="清空所有点云数据">
+        <span>🗑</span> 清空
+      </button>
+    </div>
   </div>
 
-  <div id="status" class="connecting">连接中...</div>
-
-  <div id="controls">
-    <button class="primary" id="pauseBtn">⏸ 暂停</button>
-    <button class="danger" id="clearBtn">🗑 清空</button>
+  <!-- 左侧信息面板 -->
+  <div id="infoPanel">
+    <h4>📊 数据统计</h4>
+    <div class="stat-row">
+      <span class="label">总点数</span>
+      <span class="value" id="totalPoints">0</span>
+    </div>
+    <div class="stat-row">
+      <span class="label">累计帧数</span>
+      <span class="value" id="frameCount">0</span>
+    </div>
+    <div class="stat-row">
+      <span class="label">渲染FPS</span>
+      <span class="value" id="fps">0</span>
+    </div>
+    <div class="stat-row">
+      <span class="label">无人机位置</span>
+      <span class="value" id="dronePos">--</span>
+    </div>
+    <div class="stat-row">
+      <span class="label">文件</span>
+      <span class="value" id="fileName">无</span>
+    </div>
   </div>
 
+  <!-- 右侧控制面板 -->
+  <div id="controlPanel">
+    <h4>⚙️ 显示设置</h4>
+    <div class="control-group">
+      <label>点大小</label>
+      <input type="range" id="pointSize" min="1" max="10" value="3" step="0.5">
+      <div class="range-value" id="pointSizeValue">0.03</div>
+    </div>
+    <div class="control-group">
+      <label>最大点数 (万)</label>
+      <input type="range" id="maxPoints" min="5" max="100" value="50" step="5">
+      <div class="range-value" id="maxPointsValue">50万</div>
+    </div>
+    <div class="control-group">
+      <h4 style="margin-top: 8px;">📷 视角</h4>
+      <div class="btn-group">
+        <button class="btn" id="viewTop">俯视图</button>
+        <button class="btn" id="viewFront">正视图</button>
+        <button class="btn" id="viewSide">侧视图</button>
+        <button class="btn" id="viewReset">重置视角</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部提示 -->
   <div id="hint">
-    <p>🖱 左键拖拽旋转视角</p>
-    <p>🖱 右键拖拽平移</p>
-    <p>🖱 滚轮缩放</p>
+    <span>🖱️ 左键旋转</span>
+    <span>🖱️ 右键平移</span>
+    <span>🖱️ 滚轮缩放</span>
   </div>
 
-  <!-- Three.js (使用国内CDN) -->
+  <!-- Three.js -->
   <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
   <script src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
 
   <script>
-    // 配置
+    // ==================== 配置 ====================
     const WS_URL = `ws://${window.location.hostname}:${window.location.port || 3001}`;
-    const MAX_POINTS = 500000;
+    let MAX_POINTS = 500000;
 
-    // 状态
+    // ==================== 状态 ====================
     let ws = null;
     let isPaused = false;
     let totalPoints = 0;
     let frameCount = 0;
     let lastFpsTime = Date.now();
     let fpsFrameCount = 0;
+    let loadedFileName = null;
 
-    // Three.js 场景
+    // ==================== Three.js ====================
     let scene, camera, renderer, controls;
-    let pointCloud, pointGeometry;
+    let pointCloud, pointGeometry, pointMaterial;
     let droneModel;
     let positions = [];
     let colors = [];
 
-    // 初始化 Three.js
+    // ==================== 初始化 Three.js ====================
     function initThree() {
       try {
-        // 场景
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a1a2e);
+        scene.background = new THREE.Color(0x0d1117);
 
-        // 相机
         camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(8, 8, 8);
         camera.up.set(0, 0, 1);
 
-        // 渲染器
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         document.getElementById('container').appendChild(renderer.domElement);
 
-        // 控制器
         controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
@@ -183,49 +345,39 @@
         dirLight.position.set(10, 10, 10);
         scene.add(dirLight);
 
-        // 网格 (XY平面)
-        const gridHelper = new THREE.GridHelper(20, 20, 0x4fc3f7, 0x333333);
+        // 网格
+        const gridHelper = new THREE.GridHelper(20, 20, 0x58a6ff, 0x21262d);
         gridHelper.rotation.x = Math.PI / 2;
         scene.add(gridHelper);
 
         // 坐标轴
-        const axesHelper = new THREE.AxesHelper(3);
-        scene.add(axesHelper);
-
-        // 添加坐标轴标签提示
+        scene.add(new THREE.AxesHelper(3));
         addAxisLabels();
 
-        // 点云几何体
+        // 点云
         pointGeometry = new THREE.BufferGeometry();
-        const material = new THREE.PointsMaterial({
+        pointMaterial = new THREE.PointsMaterial({
           size: 0.03,
           vertexColors: true,
           sizeAttenuation: true
         });
-        pointCloud = new THREE.Points(pointGeometry, material);
+        pointCloud = new THREE.Points(pointGeometry, pointMaterial);
         scene.add(pointCloud);
 
         // 无人机模型
         createDroneModel();
 
-        // 窗口调整
         window.addEventListener('resize', onWindowResize);
-
-        // 隐藏加载提示
         document.getElementById('loading').classList.add('hidden');
-
-        // 渲染循环
         animate();
-
         console.log('✅ 3D场景初始化成功');
       } catch (error) {
         console.error('❌ 3D场景初始化失败:', error);
-        document.getElementById('loading').innerHTML = '<div style="color: #f44336;">3D场景加载失败<br>请刷新页面重试</div>';
+        document.getElementById('loading').innerHTML = '<div style="color: #f85149;">加载失败，请刷新重试</div>';
       }
     }
 
     function addAxisLabels() {
-      // 创建简单的坐标轴指示
       const createLabel = (text, position, color) => {
         const canvas = document.createElement('canvas');
         canvas.width = 64;
@@ -236,7 +388,6 @@
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(text, 32, 32);
-
         const texture = new THREE.CanvasTexture(canvas);
         const material = new THREE.SpriteMaterial({ map: texture });
         const sprite = new THREE.Sprite(material);
@@ -244,38 +395,32 @@
         sprite.scale.set(0.5, 0.5, 0.5);
         scene.add(sprite);
       };
-
-      createLabel('X', new THREE.Vector3(3.5, 0, 0), '#ff4444');
-      createLabel('Y', new THREE.Vector3(0, 3.5, 0), '#44ff44');
-      createLabel('Z', new THREE.Vector3(0, 0, 3.5), '#4444ff');
+      createLabel('X', new THREE.Vector3(3.5, 0, 0), '#f85149');
+      createLabel('Y', new THREE.Vector3(0, 3.5, 0), '#3fb950');
+      createLabel('Z', new THREE.Vector3(0, 0, 3.5), '#58a6ff');
     }
 
     function createDroneModel() {
       droneModel = new THREE.Group();
-
-      // 主体
       const bodyGeom = new THREE.BoxGeometry(0.3, 0.3, 0.08);
-      const bodyMat = new THREE.MeshStandardMaterial({ color: 0x4fc3f7, metalness: 0.8, roughness: 0.2 });
+      const bodyMat = new THREE.MeshStandardMaterial({ color: 0x58a6ff, metalness: 0.8, roughness: 0.2 });
       droneModel.add(new THREE.Mesh(bodyGeom, bodyMat));
 
-      // 前方指示器 (红色锥体指向X正方向)
       const coneGeom = new THREE.ConeGeometry(0.04, 0.12, 4);
-      const coneMat = new THREE.MeshStandardMaterial({ color: 0xff4d4f, emissive: 0xff4d4f, emissiveIntensity: 0.5 });
+      const coneMat = new THREE.MeshStandardMaterial({ color: 0xf85149, emissive: 0xf85149, emissiveIntensity: 0.5 });
       const cone = new THREE.Mesh(coneGeom, coneMat);
       cone.position.set(0.2, 0, 0);
       cone.rotation.z = -Math.PI / 2;
       droneModel.add(cone);
 
-      // 螺旋桨
       const propGeom = new THREE.CylinderGeometry(0.08, 0.08, 0.01, 32);
-      const propMat = new THREE.MeshStandardMaterial({ color: 0x52c41a, transparent: true, opacity: 0.6 });
+      const propMat = new THREE.MeshStandardMaterial({ color: 0x3fb950, transparent: true, opacity: 0.6 });
       [[-0.12, -0.12], [0.12, -0.12], [-0.12, 0.12], [0.12, 0.12]].forEach(([x, y]) => {
         const prop = new THREE.Mesh(propGeom, propMat);
         prop.position.set(x, y, 0.05);
         droneModel.add(prop);
       });
 
-      // 初始位置在原点
       droneModel.position.set(0, 0, 0);
       scene.add(droneModel);
     }
@@ -290,8 +435,6 @@
       requestAnimationFrame(animate);
       controls.update();
       renderer.render(scene, camera);
-
-      // 计算FPS
       fpsFrameCount++;
       const now = Date.now();
       if (now - lastFpsTime >= 1000) {
@@ -301,55 +444,49 @@
       }
     }
 
-    // WebSocket 连接
+    // ==================== WebSocket ====================
     function connectWebSocket() {
-      console.log('🔗 连接 WebSocket:', WS_URL);
-      document.getElementById('status').className = 'connecting';
-      document.getElementById('status').textContent = '连接中...';
+      console.log('🔗 连接:', WS_URL);
+      updateStatus('connecting', '连接中...');
 
       try {
         ws = new WebSocket(WS_URL);
-
         ws.onopen = () => {
-          document.getElementById('status').className = 'connected';
-          document.getElementById('status').textContent = '已连接';
+          updateStatus('connected', '已连接');
           console.log('✅ WebSocket 已连接');
         };
-
         ws.onclose = () => {
-          document.getElementById('status').className = 'disconnected';
-          document.getElementById('status').textContent = '已断开';
-          console.log('❌ WebSocket 已断开，5秒后重连...');
+          updateStatus('disconnected', '已断开');
+          console.log('❌ 已断开，5秒后重连...');
           setTimeout(connectWebSocket, 5000);
         };
-
         ws.onerror = (err) => {
           console.error('❌ WebSocket 错误:', err);
-          document.getElementById('status').className = 'disconnected';
-          document.getElementById('status').textContent = '连接错误';
+          updateStatus('disconnected', '连接错误');
         };
-
         ws.onmessage = (event) => {
           try {
-            const msg = JSON.parse(event.data);
-            handleMessage(msg);
+            handleMessage(JSON.parse(event.data));
           } catch (e) {
             console.error('消息解析错误:', e);
           }
         };
       } catch (error) {
         console.error('❌ WebSocket 创建失败:', error);
-        document.getElementById('status').className = 'disconnected';
-        document.getElementById('status').textContent = '连接失败';
+        updateStatus('disconnected', '连接失败');
         setTimeout(connectWebSocket, 5000);
       }
+    }
+
+    function updateStatus(className, text) {
+      const el = document.getElementById('status');
+      el.className = className;
+      el.textContent = text;
     }
 
     function handleMessage(msg) {
       if (msg.type === 'mqtt_message') {
         const { topic, data } = msg;
-
-        // 点云数据
         if ((topic === '/daf/pointcloud' || topic === '/daf/pointcloud_rgb') && !isPaused) {
           if (data.points && data.points.length > 0) {
             addPoints(data.points);
@@ -357,16 +494,14 @@
             document.getElementById('frameCount').textContent = frameCount;
           }
         }
-
-        // 位姿数据
         if (topic === '/daf/local/odometry') {
           updateDronePosition(data);
         }
       }
     }
 
+    // ==================== 点云操作 ====================
     function addPoints(newPoints) {
-      // 检查是否超过最大点数
       if (totalPoints >= MAX_POINTS) return;
 
       const availableSpace = MAX_POINTS - totalPoints;
@@ -377,35 +512,20 @@
         const y = point.xyz?.y ?? 0;
         const z = point.xyz?.z ?? 0;
         const intensity = (point.intensity ?? 128) / 255;
-
         positions.push(x, y, z);
-        // 颜色：蓝色到红色渐变
-        colors.push(intensity, 0.3, 1 - intensity);
+        colors.push(intensity, 0.4, 1 - intensity);
       });
 
       totalPoints += pointsToAdd.length;
-      document.getElementById('totalPoints').textContent = totalPoints.toLocaleString();
+      updatePointCloud();
+      updateSaveButton();
+    }
 
-      // 更新几何体
+    function updatePointCloud() {
       pointGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
       pointGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
       pointGeometry.computeBoundingSphere();
-    }
-
-    function updateDronePosition(data) {
-      const pos = data.pose?.position || data.position;
-      const ori = data.pose?.orientation || data.orientation;
-
-      if (pos && droneModel) {
-        droneModel.position.set(pos.x, pos.y, pos.z);
-        document.getElementById('dronePos').textContent =
-          `(${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)})`;
-      }
-
-      if (ori && droneModel) {
-        const quat = new THREE.Quaternion(ori.x, ori.y, ori.z, ori.w);
-        droneModel.setRotationFromQuaternion(quat);
-      }
+      document.getElementById('totalPoints').textContent = totalPoints.toLocaleString();
     }
 
     function clearPoints() {
@@ -413,24 +533,177 @@
       colors = [];
       totalPoints = 0;
       frameCount = 0;
+      loadedFileName = null;
       pointGeometry.setAttribute('position', new THREE.Float32BufferAttribute([], 3));
       pointGeometry.setAttribute('color', new THREE.Float32BufferAttribute([], 3));
       document.getElementById('totalPoints').textContent = '0';
       document.getElementById('frameCount').textContent = '0';
+      document.getElementById('fileName').textContent = '无';
+      updateSaveButton();
       console.log('🗑 点云已清空');
     }
 
-    // 事件绑定
+    function updateDronePosition(data) {
+      const pos = data.pose?.position || data.position;
+      const ori = data.pose?.orientation || data.orientation;
+      if (pos && droneModel) {
+        droneModel.position.set(pos.x, pos.y, pos.z);
+        document.getElementById('dronePos').textContent = `${pos.x.toFixed(1)},${pos.y.toFixed(1)},${pos.z.toFixed(1)}`;
+      }
+      if (ori && droneModel) {
+        droneModel.setRotationFromQuaternion(new THREE.Quaternion(ori.x, ori.y, ori.z, ori.w));
+      }
+    }
+
+    function updateSaveButton() {
+      document.getElementById('saveBtn').disabled = totalPoints === 0;
+    }
+
+    // ==================== 文件操作 ====================
+    function loadPCDFile(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const text = e.target.result;
+          const lines = text.split('\n');
+          let dataStarted = false;
+          let loadedPoints = [];
+
+          for (let line of lines) {
+            line = line.trim();
+            if (line.startsWith('DATA')) {
+              dataStarted = true;
+              continue;
+            }
+            if (dataStarted && line) {
+              const parts = line.split(/\s+/);
+              if (parts.length >= 3) {
+                const x = parseFloat(parts[0]);
+                const y = parseFloat(parts[1]);
+                const z = parseFloat(parts[2]);
+                const intensity = parts.length >= 4 ? parseInt(parts[3]) & 0xFF : 128;
+                if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                  loadedPoints.push({ x, y, z, intensity });
+                }
+              }
+            }
+          }
+
+          if (loadedPoints.length > 0) {
+            // 清空现有数据
+            positions = [];
+            colors = [];
+            totalPoints = 0;
+
+            // 添加加载的点
+            loadedPoints.forEach(p => {
+              positions.push(p.x, p.y, p.z);
+              const i = p.intensity / 255;
+              colors.push(i, 0.4, 1 - i);
+            });
+            totalPoints = loadedPoints.length;
+
+            updatePointCloud();
+            updateSaveButton();
+            loadedFileName = file.name;
+            document.getElementById('fileName').textContent = file.name.slice(0, 12) + (file.name.length > 12 ? '...' : '');
+            console.log(`✅ 已加载 ${totalPoints.toLocaleString()} 个点`);
+          }
+        } catch (err) {
+          console.error('❌ 加载失败:', err);
+          alert('文件加载失败: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function savePCDFile() {
+      if (totalPoints === 0) {
+        alert('没有可保存的点云数据');
+        return;
+      }
+
+      const header = [
+        '# .PCD v0.7 - Point Cloud Data file format',
+        'VERSION 0.7',
+        'FIELDS x y z intensity',
+        'SIZE 4 4 4 4',
+        'TYPE F F F U',
+        'COUNT 1 1 1 1',
+        `WIDTH ${totalPoints}`,
+        'HEIGHT 1',
+        'VIEWPOINT 0 0 0 1 0 0 0',
+        `POINTS ${totalPoints}`,
+        'DATA ascii'
+      ].join('\n');
+
+      let data = '';
+      for (let i = 0; i < totalPoints; i++) {
+        const idx = i * 3;
+        const x = positions[idx];
+        const y = positions[idx + 1];
+        const z = positions[idx + 2];
+        const intensity = Math.floor(colors[idx] * 255);
+        data += `${x.toFixed(6)} ${y.toFixed(6)} ${z.toFixed(6)} ${intensity}\n`;
+      }
+
+      const blob = new Blob([header + '\n' + data], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      link.download = `pointcloud_${timestamp}.pcd`;
+      link.href = url;
+      link.click();
+      URL.revokeObjectURL(url);
+      console.log(`💾 已保存 ${totalPoints.toLocaleString()} 个点`);
+    }
+
+    // ==================== 视角控制 ====================
+    function setView(position, target) {
+      camera.position.set(...position);
+      controls.target.set(...target);
+      controls.update();
+    }
+
+    // ==================== 事件绑定 ====================
+    document.getElementById('loadBtn').addEventListener('click', () => {
+      document.getElementById('fileInput').click();
+    });
+
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      if (e.target.files[0]) {
+        loadPCDFile(e.target.files[0]);
+        e.target.value = '';
+      }
+    });
+
+    document.getElementById('saveBtn').addEventListener('click', savePCDFile);
+
     document.getElementById('pauseBtn').addEventListener('click', function() {
       isPaused = !isPaused;
-      this.textContent = isPaused ? '▶ 继续' : '⏸ 暂停';
-      this.className = isPaused ? 'danger' : 'primary';
-      console.log(isPaused ? '⏸ 已暂停' : '▶ 已继续');
+      this.innerHTML = isPaused ? '<span>▶</span> 继续' : '<span>⏸</span> 暂停';
+      this.classList.toggle('active', isPaused);
     });
 
     document.getElementById('clearBtn').addEventListener('click', clearPoints);
 
-    // 初始化
+    document.getElementById('pointSize').addEventListener('input', function() {
+      const size = this.value / 100;
+      pointMaterial.size = size;
+      document.getElementById('pointSizeValue').textContent = size.toFixed(2);
+    });
+
+    document.getElementById('maxPoints').addEventListener('input', function() {
+      MAX_POINTS = this.value * 10000;
+      document.getElementById('maxPointsValue').textContent = this.value + '万';
+    });
+
+    document.getElementById('viewTop').addEventListener('click', () => setView([0, 0, 15], [0, 0, 0]));
+    document.getElementById('viewFront').addEventListener('click', () => setView([15, 0, 2], [0, 0, 2]));
+    document.getElementById('viewSide').addEventListener('click', () => setView([0, 15, 2], [0, 0, 2]));
+    document.getElementById('viewReset').addEventListener('click', () => setView([8, 8, 8], [0, 0, 0]));
+
+    // ==================== 初始化 ====================
     window.onload = function() {
       initThree();
       connectWebSocket();
