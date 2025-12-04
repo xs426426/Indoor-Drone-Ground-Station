@@ -322,7 +322,8 @@
       var STATE = { NONE: -1, ROTATE: 0, ZOOM: 1, PAN: 2 };
       var state = STATE.NONE;
 
-      function getZoomScale() { return Math.pow(0.95, 1); }
+      // 降低缩放灵敏度（原来是0.95，改为0.98更平滑）
+      function getZoomScale() { return Math.pow(0.98, 1); }
 
       function rotateLeft(angle) { sphericalDelta.theta -= angle; }
       function rotateUp(angle) { sphericalDelta.phi -= angle; }
@@ -401,13 +402,15 @@
         if (state === STATE.ROTATE) {
           rotateEnd.set(event.clientX, event.clientY);
           rotateDelta.subVectors(rotateEnd, rotateStart);
-          rotateLeft(2 * Math.PI * rotateDelta.x / domElement.clientWidth);
-          rotateUp(2 * Math.PI * rotateDelta.y / domElement.clientHeight);
+          // 降低旋转灵敏度（原来是2，改为0.5）
+          rotateLeft(0.5 * Math.PI * rotateDelta.x / domElement.clientWidth);
+          rotateUp(0.5 * Math.PI * rotateDelta.y / domElement.clientHeight);
           rotateStart.copy(rotateEnd);
         } else if (state === STATE.PAN) {
           panEnd.set(event.clientX, event.clientY);
           panDelta.subVectors(panEnd, panStart);
-          pan(panDelta.x, panDelta.y);
+          // 降低平移灵敏度（乘以0.3）
+          pan(panDelta.x * 0.3, panDelta.y * 0.3);
           panStart.copy(panEnd);
         }
         scope.update();
