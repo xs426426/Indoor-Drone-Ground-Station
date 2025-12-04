@@ -25,9 +25,10 @@
     #videoContainer {
       position: relative;
       background: #000;
-      border-radius: 8px;
+      border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      border: 1px solid #333;
     }
     #videoFrame {
       max-width: 90vw;
@@ -39,93 +40,122 @@
       height: 480px;
       max-width: 90vw;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       color: #666;
-      font-size: 18px;
-      background: #111;
+      font-size: 16px;
+      background: linear-gradient(135deg, #111 0%, #1a1a2e 100%);
+    }
+    #noSignal .icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+      opacity: 0.5;
+    }
+    #noSignal .text {
+      color: #888;
+    }
+    #noSignal .subtext {
+      font-size: 12px;
+      color: #555;
+      margin-top: 10px;
     }
     #status {
       position: absolute;
-      top: 10px;
-      right: 10px;
-      padding: 6px 12px;
+      top: 12px;
+      right: 12px;
+      padding: 6px 14px;
       border-radius: 15px;
       font-size: 12px;
+      font-weight: bold;
     }
-    #status.connected { background: #4caf50; }
-    #status.disconnected { background: #f44336; }
+    #status.connected { background: #4caf50; color: #fff; }
+    #status.disconnected { background: #f44336; color: #fff; }
+    #status.connecting { background: #ff9800; color: #fff; }
     #info {
       position: absolute;
-      bottom: 10px;
-      left: 10px;
+      bottom: 12px;
+      left: 12px;
       background: rgba(0,0,0,0.7);
-      padding: 8px 12px;
-      border-radius: 4px;
+      padding: 10px 14px;
+      border-radius: 6px;
       font-size: 12px;
+      display: flex;
+      gap: 20px;
     }
-    #info span { margin-right: 15px; }
+    #info .item { display: flex; align-items: center; gap: 6px; }
     #info .label { color: #888; }
-    #info .value { color: #4fc3f7; }
+    #info .value { color: #4fc3f7; font-weight: bold; }
     #controls {
       margin-top: 20px;
       display: flex;
-      gap: 10px;
+      gap: 12px;
     }
     #controls button {
-      padding: 10px 20px;
+      padding: 12px 24px;
       border: none;
-      border-radius: 4px;
+      border-radius: 8px;
       cursor: pointer;
       font-size: 14px;
-      transition: opacity 0.2s;
+      font-weight: 500;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    #controls button:hover { opacity: 0.8; }
+    #controls button:hover { transform: scale(1.05); }
+    #controls button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
     #controls button.primary { background: #4fc3f7; color: #000; }
-    #controls button.secondary { background: #444; color: #fff; }
+    #controls button.secondary { background: #333; color: #fff; border: 1px solid #444; }
+    #controls button.danger { background: #f44336; color: #fff; }
     #fullscreenBtn {
       position: absolute;
-      top: 10px;
-      left: 10px;
-      background: rgba(0,0,0,0.5);
+      top: 12px;
+      left: 12px;
+      background: rgba(0,0,0,0.6);
       border: none;
       color: #fff;
-      padding: 6px 10px;
-      border-radius: 4px;
+      padding: 8px 12px;
+      border-radius: 6px;
       cursor: pointer;
       font-size: 12px;
+      transition: all 0.2s;
     }
+    #fullscreenBtn:hover { background: rgba(0,0,0,0.8); }
   </style>
 </head>
 <body>
-  <h1>摄像头实时视频</h1>
+  <h1>📹 摄像头实时视频</h1>
 
   <div id="videoContainer">
-    <div id="noSignal">等待视频信号...</div>
+    <div id="noSignal">
+      <div class="icon">📷</div>
+      <div class="text">等待视频信号...</div>
+      <div class="subtext">请确保无人机已开启并连接</div>
+    </div>
     <img id="videoFrame" style="display: none;" alt="Camera Feed">
-    <div id="status" class="disconnected">未连接</div>
-    <button id="fullscreenBtn">全屏</button>
+    <div id="status" class="connecting">连接中...</div>
+    <button id="fullscreenBtn">⛶ 全屏</button>
     <div id="info">
-      <span><span class="label">FPS: </span><span class="value" id="fps">0</span></span>
-      <span><span class="label">帧数: </span><span class="value" id="frameCount">0</span></span>
-      <span><span class="label">分辨率: </span><span class="value" id="resolution">-</span></span>
+      <div class="item"><span class="label">FPS:</span><span class="value" id="fps">0</span></div>
+      <div class="item"><span class="label">帧数:</span><span class="value" id="frameCount">0</span></div>
+      <div class="item"><span class="label">分辨率:</span><span class="value" id="resolution">-</span></div>
     </div>
   </div>
 
   <div id="controls">
-    <button class="primary" id="pauseBtn">暂停</button>
-    <button class="secondary" id="screenshotBtn">截图</button>
+    <button class="primary" id="pauseBtn">⏸ 暂停</button>
+    <button class="secondary" id="screenshotBtn">📸 截图</button>
   </div>
 
   <script>
     // 配置
-    const WS_URL = `ws://${window.location.host}`;
+    const WS_URL = `ws://${window.location.hostname}:${window.location.port || 3001}`;
 
     // 状态
     let ws = null;
     let isPaused = false;
     let frameCount = 0;
-    let lastFpsTime = Date.now();
     let fpsFrameCount = 0;
 
     // 元素
@@ -138,33 +168,46 @@
 
     // WebSocket 连接
     function connectWebSocket() {
-      ws = new WebSocket(WS_URL);
+      console.log('🔗 连接 WebSocket:', WS_URL);
+      statusEl.className = 'connecting';
+      statusEl.textContent = '连接中...';
 
-      ws.onopen = () => {
-        statusEl.className = 'connected';
-        statusEl.textContent = '已连接';
-        console.log('WebSocket 已连接');
-      };
+      try {
+        ws = new WebSocket(WS_URL);
 
-      ws.onclose = () => {
+        ws.onopen = () => {
+          statusEl.className = 'connected';
+          statusEl.textContent = '已连接';
+          console.log('✅ WebSocket 已连接');
+        };
+
+        ws.onclose = () => {
+          statusEl.className = 'disconnected';
+          statusEl.textContent = '已断开';
+          console.log('❌ WebSocket 已断开，5秒后重连...');
+          setTimeout(connectWebSocket, 5000);
+        };
+
+        ws.onerror = (err) => {
+          console.error('❌ WebSocket 错误:', err);
+          statusEl.className = 'disconnected';
+          statusEl.textContent = '连接错误';
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            handleMessage(msg);
+          } catch (e) {
+            console.error('消息解析错误:', e);
+          }
+        };
+      } catch (error) {
+        console.error('❌ WebSocket 创建失败:', error);
         statusEl.className = 'disconnected';
-        statusEl.textContent = '已断开';
-        console.log('WebSocket 已断开，5秒后重连...');
+        statusEl.textContent = '连接失败';
         setTimeout(connectWebSocket, 5000);
-      };
-
-      ws.onerror = (err) => {
-        console.error('WebSocket 错误:', err);
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-          handleMessage(msg);
-        } catch (e) {
-          console.error('消息解析错误:', e);
-        }
-      };
+      }
     }
 
     function handleMessage(msg) {
@@ -183,9 +226,6 @@
 
       if (encoding === 'jpeg' || encoding === 'png') {
         imgSrc = `data:image/${encoding};base64,${data.data}`;
-      } else if (encoding === 'rgb8' || encoding === 'bgr8') {
-        // RGB/BGR 原始数据需要特殊处理，这里简化处理
-        imgSrc = `data:image/jpeg;base64,${data.data}`;
       } else {
         imgSrc = `data:image/jpeg;base64,${data.data}`;
       }
@@ -215,12 +255,16 @@
     // 暂停/继续
     document.getElementById('pauseBtn').addEventListener('click', function() {
       isPaused = !isPaused;
-      this.textContent = isPaused ? '继续' : '暂停';
-      if (isPaused) {
-        noSignal.textContent = '已暂停';
-      } else {
-        noSignal.textContent = '等待视频信号...';
+      this.textContent = isPaused ? '▶ 继续' : '⏸ 暂停';
+      this.className = isPaused ? 'danger' : 'primary';
+
+      if (isPaused && videoFrame.style.display === 'none') {
+        noSignal.querySelector('.text').textContent = '已暂停';
+      } else if (!isPaused && videoFrame.style.display === 'none') {
+        noSignal.querySelector('.text').textContent = '等待视频信号...';
       }
+
+      console.log(isPaused ? '⏸ 已暂停' : '▶ 已继续');
     });
 
     // 截图
@@ -243,6 +287,8 @@
       link.download = `screenshot_${timestamp}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
+
+      console.log('📸 截图已保存');
     });
 
     // 全屏
