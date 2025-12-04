@@ -294,9 +294,147 @@
     <span>🖱️ 滚轮缩放</span>
   </div>
 
-  <!-- Three.js -->
-  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-  <script src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+  <!-- Three.js - 使用cdnjs更稳定 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // OrbitControls 内联代码（避免跨域问题）
+    THREE.OrbitControls = function(object, domElement) {
+      this.object = object;
+      this.domElement = domElement;
+      this.target = new THREE.Vector3();
+      this.enableDamping = false;
+      this.dampingFactor = 0.05;
+      this.enableZoom = true;
+      this.enableRotate = true;
+      this.enablePan = true;
+
+      var scope = this;
+      var spherical = new THREE.Spherical();
+      var sphericalDelta = new THREE.Spherical();
+      var scale = 1;
+      var panOffset = new THREE.Vector3();
+      var rotateStart = new THREE.Vector2();
+      var rotateEnd = new THREE.Vector2();
+      var rotateDelta = new THREE.Vector2();
+      var panStart = new THREE.Vector2();
+      var panEnd = new THREE.Vector2();
+      var panDelta = new THREE.Vector2();
+      var STATE = { NONE: -1, ROTATE: 0, ZOOM: 1, PAN: 2 };
+      var state = STATE.NONE;
+
+      function getZoomScale() { return Math.pow(0.95, 1); }
+
+      function rotateLeft(angle) { sphericalDelta.theta -= angle; }
+      function rotateUp(angle) { sphericalDelta.phi -= angle; }
+
+      function panLeft(distance, objectMatrix) {
+        var v = new THREE.Vector3();
+        v.setFromMatrixColumn(objectMatrix, 0);
+        v.multiplyScalar(-distance);
+        panOffset.add(v);
+      }
+
+      function panUp(distance, objectMatrix) {
+        var v = new THREE.Vector3();
+        v.setFromMatrixColumn(objectMatrix, 1);
+        v.multiplyScalar(distance);
+        panOffset.add(v);
+      }
+
+      function pan(deltaX, deltaY) {
+        var element = scope.domElement;
+        var position = scope.object.position;
+        var offset = position.clone().sub(scope.target);
+        var targetDistance = offset.length();
+        targetDistance *= Math.tan((scope.object.fov / 2) * Math.PI / 180.0);
+        panLeft(2 * deltaX * targetDistance / element.clientHeight, scope.object.matrix);
+        panUp(2 * deltaY * targetDistance / element.clientHeight, scope.object.matrix);
+      }
+
+      this.update = function() {
+        var offset = new THREE.Vector3();
+        var quat = new THREE.Quaternion().setFromUnitVectors(object.up, new THREE.Vector3(0, 1, 0));
+        var quatInverse = quat.clone().invert();
+        var position = scope.object.position;
+
+        offset.copy(position).sub(scope.target);
+        offset.applyQuaternion(quat);
+        spherical.setFromVector3(offset);
+        spherical.theta += sphericalDelta.theta;
+        spherical.phi += sphericalDelta.phi;
+        spherical.phi = Math.max(0.01, Math.min(Math.PI - 0.01, spherical.phi));
+        spherical.radius *= scale;
+        spherical.radius = Math.max(0.1, Math.min(1000, spherical.radius));
+
+        scope.target.add(panOffset);
+        offset.setFromSpherical(spherical);
+        offset.applyQuaternion(quatInverse);
+        position.copy(scope.target).add(offset);
+        scope.object.lookAt(scope.target);
+
+        if (scope.enableDamping) {
+          sphericalDelta.theta *= (1 - scope.dampingFactor);
+          sphericalDelta.phi *= (1 - scope.dampingFactor);
+        } else {
+          sphericalDelta.set(0, 0, 0);
+        }
+        scale = 1;
+        panOffset.set(0, 0, 0);
+        return false;
+      };
+
+      function onMouseDown(event) {
+        event.preventDefault();
+        if (event.button === 0) {
+          state = STATE.ROTATE;
+          rotateStart.set(event.clientX, event.clientY);
+        } else if (event.button === 2) {
+          state = STATE.PAN;
+          panStart.set(event.clientX, event.clientY);
+        }
+        document.addEventListener('mousemove', onMouseMove, false);
+        document.addEventListener('mouseup', onMouseUp, false);
+      }
+
+      function onMouseMove(event) {
+        event.preventDefault();
+        if (state === STATE.ROTATE) {
+          rotateEnd.set(event.clientX, event.clientY);
+          rotateDelta.subVectors(rotateEnd, rotateStart);
+          rotateLeft(2 * Math.PI * rotateDelta.x / domElement.clientWidth);
+          rotateUp(2 * Math.PI * rotateDelta.y / domElement.clientHeight);
+          rotateStart.copy(rotateEnd);
+        } else if (state === STATE.PAN) {
+          panEnd.set(event.clientX, event.clientY);
+          panDelta.subVectors(panEnd, panStart);
+          pan(panDelta.x, panDelta.y);
+          panStart.copy(panEnd);
+        }
+        scope.update();
+      }
+
+      function onMouseUp() {
+        state = STATE.NONE;
+        document.removeEventListener('mousemove', onMouseMove, false);
+        document.removeEventListener('mouseup', onMouseUp, false);
+      }
+
+      function onWheel(event) {
+        event.preventDefault();
+        if (event.deltaY < 0) { scale /= getZoomScale(); }
+        else if (event.deltaY > 0) { scale *= getZoomScale(); }
+        scope.update();
+      }
+
+      function onContextMenu(event) { event.preventDefault(); }
+
+      domElement.addEventListener('mousedown', onMouseDown, false);
+      domElement.addEventListener('wheel', onWheel, { passive: false });
+      domElement.addEventListener('contextmenu', onContextMenu, false);
+
+      this.update();
+    };
+  </script>
 
   <script>
     // ==================== 配置 ====================
