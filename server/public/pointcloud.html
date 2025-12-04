@@ -464,6 +464,9 @@
     let scene, camera, renderer, controls;
     let pointCloud, pointGeometry, pointMaterial;
     let droneModel;
+    let droneTrailLine;        // 轨迹线对象
+    let trailPoints = [];      // 轨迹点数组
+    const MAX_TRAIL_POINTS = 200;  // 最大轨迹点数，与主网站一致
     let positions = [];
     let colors = [];
 
@@ -571,6 +574,12 @@
 
       droneModel.position.set(0, 0, 0);
       scene.add(droneModel);
+
+      // 创建轨迹线，与主网站一致
+      const trailGeometry = new THREE.BufferGeometry();
+      const trailMaterial = new THREE.LineBasicMaterial({ color: 0x1890ff, linewidth: 2 });
+      droneTrailLine = new THREE.Line(trailGeometry, trailMaterial);
+      scene.add(droneTrailLine);
     }
 
     function onWindowResize() {
@@ -688,16 +697,54 @@
       document.getElementById('frameCount').textContent = '0';
       document.getElementById('fileName').textContent = '无';
       updateSaveButton();
-      console.log('🗑 点云已清空');
+
+      // 清空轨迹
+      trailPoints = [];
+      if (droneTrailLine) {
+        droneTrailLine.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(0), 3));
+        droneTrailLine.geometry.attributes.position.needsUpdate = true;
+      }
+
+      console.log('🗑 点云和轨迹已清空');
     }
 
     function updateDronePosition(data) {
       const pos = data.pose?.position || data.position;
       const ori = data.pose?.orientation || data.orientation;
+
       if (pos && droneModel) {
-        droneModel.position.set(pos.x, pos.y, pos.z);
+        const newPos = new THREE.Vector3(pos.x, pos.y, pos.z);
+        droneModel.position.copy(newPos);
         document.getElementById('dronePos').textContent = `${pos.x.toFixed(1)},${pos.y.toFixed(1)},${pos.z.toFixed(1)}`;
+
+        // 检测"瞬移"（设置起点）- 如果距离上一个点太远，清空轨迹，与主网站一致
+        if (trailPoints.length > 0) {
+          const lastPoint = trailPoints[trailPoints.length - 1];
+          const distance = newPos.distanceTo(lastPoint);
+          if (distance > 2.0) {
+            // 距离超过2米，认为是瞬移（设置起点），清空轨迹
+            trailPoints = [];
+            console.log('🔄 检测到位置瞬移，清空轨迹');
+          }
+        }
+
+        // 记录轨迹点（每隔一定距离记录），与主网站一致
+        if (trailPoints.length === 0 ||
+            newPos.distanceTo(trailPoints[trailPoints.length - 1]) > 0.05) {
+          trailPoints.push(newPos.clone());
+          if (trailPoints.length > MAX_TRAIL_POINTS) {
+            trailPoints.shift();
+          }
+
+          // 更新轨迹线的几何体
+          if (droneTrailLine && trailPoints.length > 1) {
+            const trailPositions = new Float32Array(trailPoints.flatMap(p => [p.x, p.y, p.z]));
+            droneTrailLine.geometry.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+            droneTrailLine.geometry.attributes.position.needsUpdate = true;
+          }
+        }
       }
+
       if (ori && droneModel) {
         droneModel.setRotationFromQuaternion(new THREE.Quaternion(ori.x, ori.y, ori.z, ori.w));
       }
