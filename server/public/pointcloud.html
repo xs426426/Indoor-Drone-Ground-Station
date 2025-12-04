@@ -322,8 +322,8 @@
       var STATE = { NONE: -1, ROTATE: 0, ZOOM: 1, PAN: 2 };
       var state = STATE.NONE;
 
-      // 降低缩放灵敏度（原来是0.95，改为0.98更平滑）
-      function getZoomScale() { return Math.pow(0.98, 1); }
+      // 降低缩放灵敏度（改为0.99更平滑）
+      function getZoomScale() { return Math.pow(0.99, 1); }
 
       function rotateLeft(angle) { sphericalDelta.theta -= angle; }
       function rotateUp(angle) { sphericalDelta.phi -= angle; }
