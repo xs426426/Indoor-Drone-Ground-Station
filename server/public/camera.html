@@ -150,7 +150,11 @@
 
   <script>
     // 配置
-    const WS_URL = `ws://${window.location.hostname}:${window.location.port || 3001}`;
+    // WebSocket连接：如果是80端口则不带端口号，否则使用当前端口
+    const wsPort = window.location.port || (window.location.protocol === 'https:' ? '443' : '80');
+    const WS_URL = wsPort === '80' || wsPort === '443'
+      ? `ws://${window.location.hostname}`
+      : `ws://${window.location.hostname}:${wsPort}`;
 
     // 状态
     let ws = null;
