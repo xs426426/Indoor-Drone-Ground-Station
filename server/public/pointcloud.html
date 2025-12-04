@@ -302,11 +302,14 @@
       this.object = object;
       this.domElement = domElement;
       this.target = new THREE.Vector3();
-      this.enableDamping = false;
+      this.enableDamping = true;  // 开启阻尼（惯性），与主网站一致
       this.dampingFactor = 0.05;
       this.enableZoom = true;
       this.enableRotate = true;
       this.enablePan = true;
+      this.rotateSpeed = 0.5;     // 与主网站一致
+      this.zoomSpeed = 0.8;       // 与主网站一致
+      this.panSpeed = 1.0;
 
       var scope = this;
       var spherical = new THREE.Spherical();
@@ -322,8 +325,8 @@
       var STATE = { NONE: -1, ROTATE: 0, ZOOM: 1, PAN: 2 };
       var state = STATE.NONE;
 
-      // 降低缩放灵敏度（改为0.99更平滑）
-      function getZoomScale() { return Math.pow(0.99, 1); }
+      // 缩放灵敏度，与主网站一致 (zoomSpeed=0.8)
+      function getZoomScale() { return Math.pow(0.95, scope.zoomSpeed); }
 
       function rotateLeft(angle) { sphericalDelta.theta -= angle; }
       function rotateUp(angle) { sphericalDelta.phi -= angle; }
@@ -402,15 +405,15 @@
         if (state === STATE.ROTATE) {
           rotateEnd.set(event.clientX, event.clientY);
           rotateDelta.subVectors(rotateEnd, rotateStart);
-          // 降低旋转灵敏度（原来是2，改为0.5）
-          rotateLeft(0.5 * Math.PI * rotateDelta.x / domElement.clientWidth);
-          rotateUp(0.5 * Math.PI * rotateDelta.y / domElement.clientHeight);
+          // 旋转灵敏度，与主网站一致 (rotateSpeed=0.5)
+          rotateLeft(2 * Math.PI * rotateDelta.x / domElement.clientWidth * scope.rotateSpeed);
+          rotateUp(2 * Math.PI * rotateDelta.y / domElement.clientHeight * scope.rotateSpeed);
           rotateStart.copy(rotateEnd);
         } else if (state === STATE.PAN) {
           panEnd.set(event.clientX, event.clientY);
           panDelta.subVectors(panEnd, panStart);
-          // 降低平移灵敏度（乘以0.3）
-          pan(panDelta.x * 0.3, panDelta.y * 0.3);
+          // 平移灵敏度，与主网站一致
+          pan(panDelta.x * scope.panSpeed, panDelta.y * scope.panSpeed);
           panStart.copy(panEnd);
         }
         scope.update();
