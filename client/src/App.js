@@ -8,6 +8,7 @@ import DroneStatus from './components/DroneStatus';
 import ControlPanel from './components/ControlPanel';
 import CameraViewer from './components/CameraViewer';
 import ExplorationPanel from './components/ExplorationPanel';
+import MissionHistory from './components/MissionHistory';
 import './App.css';
 
 const { Header, Content } = Layout;
@@ -23,6 +24,7 @@ function App() {
   const [isExploring, setIsExploring] = useState(false); // 是否正在探索
   const [droneMode, setDroneMode] = useState('auto'); // 'real', 'simulator', 'auto'
   const [accumulatedPointCloud, setAccumulatedPointCloud] = useState({ history: [], totalPoints: 0 }); // 累积的点云数据
+  const [waypoints, setWaypoints] = useState([]); // 航点列表
   const [stats, setStats] = useState({
     pointCount: 0,
     heartbeatCount: 0,
@@ -201,6 +203,7 @@ function App() {
                     <PointCloudViewer
                       pointCloud={displayPointCloud}
                       odometry={odometry}
+                      waypoints={waypoints}
                       onPointCloudHistoryChange={handlePointCloudHistoryChange}
                     />
                   </Card>
@@ -264,7 +267,10 @@ function App() {
                 <DroneStatus heartbeat={heartbeat} odometry={odometry} />
 
                 {/* 控制面板 */}
-                <ControlPanel odometry={odometry} />
+                <ControlPanel odometry={odometry} onWaypointsChange={setWaypoints} />
+
+                {/* 任务历史记录 */}
+                <MissionHistory />
 
                 {/* 探索面板 */}
                 <ExplorationPanel startPosition={droneStartPosition} />
