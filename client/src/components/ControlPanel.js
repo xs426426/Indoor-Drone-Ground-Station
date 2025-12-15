@@ -293,17 +293,23 @@ export default function ControlPanel({ odometry, onWaypointsChange }) {
    * 记录当前无人机位置为航点
    */
   const handleRecordCurrentPosition = () => {
-    if (!odometry || !odometry.pose) {
+    // 兼容多种数据结构：odometry.position 或 odometry.pose.position
+    const pos = odometry?.position || odometry?.pose?.position;
+
+    if (!odometry || !pos) {
       message.warning('⚠️ 无法获取无人机当前位置');
       return;
     }
 
-    const pos = odometry.pose.position;
-    const orientation = odometry.pose.orientation;
+    // 获取朝向数据（兼容多种结构）
+    const orientation = odometry?.orientation || odometry?.pose?.orientation;
 
-    // 计算 yaw (简化版本，实际应该用四元数转欧拉角)
-    const yaw = Math.atan2(2.0 * (orientation.w * orientation.z + orientation.x * orientation.y),
-                          1.0 - 2.0 * (orientation.y * orientation.y + orientation.z * orientation.z));
+    // 计算 yaw (如果有朝向数据则计算，否则默认为0)
+    let yaw = 0;
+    if (orientation && orientation.w !== undefined) {
+      yaw = Math.atan2(2.0 * (orientation.w * orientation.z + orientation.x * orientation.y),
+                       1.0 - 2.0 * (orientation.y * orientation.y + orientation.z * orientation.z));
+    }
 
     const newWaypoint = {
       key: Date.now(),
