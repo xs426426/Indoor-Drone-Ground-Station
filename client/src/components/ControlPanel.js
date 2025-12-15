@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Card, Button, Space, InputNumber, message, Collapse, Form, Select, Table, Switch, Popconfirm } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Card, Button, Space, InputNumber, message, Collapse, Form, Table, Switch, Popconfirm, Upload, Modal } from 'antd';
 import {
   RocketOutlined,
   DownOutlined,
@@ -10,20 +10,210 @@ import {
   PlusOutlined,
   DeleteOutlined,
   EnvironmentOutlined,
-  HomeOutlined
+  DownloadOutlined,
+  UploadOutlined,
+  CompassOutlined
 } from '@ant-design/icons';
 import websocket from '../services/websocket';
 
 const { Panel } = Collapse;
 
-export default function ControlPanel({ odometry }) {
+export default function ControlPanel({ odometry, onWaypointsChange }) {
   const [loading, setLoading] = useState(false);
-  const [missionId, setMissionId] = useState('mission_' + Date.now());
   const [currentExecutingId, setCurrentExecutingId] = useState(null); // 当前正在执行的任务ID
   const [waypoints, setWaypoints] = useState([]); // 航点列表
   const [returnToStart, setReturnToStart] = useState(true); // 是否返回起点
   const [autoLand, setAutoLand] = useState(true); // 是否自动降落
   const [waypointForm] = Form.useForm(); // 航点表单
+  const [presetRoutes, setPresetRoutes] = useState([]); // 预设航线列表
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false); // 确认弹窗
+  const [selectedRoute, setSelectedRoute] = useState(null); // 选中的航线
+  const [confirmReturnHome, setConfirmReturnHome] = useState(true); // 弹窗中的返航选项
+  const [confirmLand, setConfirmLand] = useState(true); // 弹窗中的降落选项
+
+  // 当航点变化时通知父组件
+  useEffect(() => {
+    if (onWaypointsChange) {
+      onWaypointsChange(waypoints);
+    }
+  }, [waypoints, onWaypointsChange]);
+
+  // 组件加载时获取预设航线列表
+  useEffect(() => {
+    fetchPresetRoutes();
+  }, []);
+
+  /**
+   * 获取预设航线列表
+   */
+  const fetchPresetRoutes = async () => {
+    try {
+      const response = await fetch('/api/preset-routes');
+      const data = await response.json();
+      if (data.success) {
+        // 转换为数组格式，方便渲染按钮
+        const routeList = Object.entries(data.routes).map(([key, route], index) => ({
+          id: key,
+          name: route.name,
+          description: route.description,
+          waypointCount: route.waypointCount,
+          displayName: `自由探索模式${index + 1}`
+        }));
+        setPresetRoutes(routeList);
+      }
+    } catch (error) {
+      console.error('获取预设航线失败:', error);
+    }
+  };
+
+  /**
+   * 执行指定预设航线
+   * @param {string} routeId - 航线ID
+   * @param {string} displayName - 显示名称
+   * @param {boolean} shouldReturnHome - 是否返航（从弹窗获取）
+   * @param {boolean} shouldLand - 是否降落（从弹窗获取）
+   */
+  const handleExecutePresetRoute = async (routeId, displayName, shouldReturnHome = true, shouldLand = true) => {
+    setLoading(true);
+    try {
+      // 获取航线详细数据
+      const response = await fetch(`/api/preset-routes/${routeId}`);
+      const data = await response.json();
+
+      if (!data.success || !data.route) {
+        message.error('获取航线数据失败');
+        return;
+      }
+
+      const routeWaypoints = data.route.waypoints;
+      if (!routeWaypoints || routeWaypoints.length === 0) {
+        message.warning('航线没有航点数据');
+        return;
+      }
+
+      // 加载航点到当前列表（用于3D显示）
+      const waypointsWithKeys = routeWaypoints.map((wp, index) => ({
+        ...wp,
+        key: wp.key || Date.now() + index
+      }));
+      setWaypoints(waypointsWithKeys);
+
+      // 生成任务ID
+      const newMissionId = 'preset_' + routeId + '_' + Date.now();
+
+      // 构建任务
+      const tasks = [{ takeOff: {} }];
+
+      routeWaypoints.forEach(wp => {
+        tasks.push({
+          autoPilot: {
+            position: { x: wp.x, y: wp.y, z: wp.z },
+            yaw: wp.yaw,
+            cameraParam: { on: false, mode: 0, interval: 0 }
+          }
+        });
+      });
+
+      // 返回起点（使用弹窗中选择的选项）
+      if (shouldReturnHome) {
+        tasks.push({
+          autoPilot: {
+            position: { x: 0, y: 0, z: 0.5 },
+            yaw: 0,
+            cameraParam: { on: false, mode: 0, interval: 0 }
+          }
+        });
+      }
+
+      // 降落（使用弹窗中选择的选项）
+      if (shouldLand) {
+        tasks.push({ land: {} });
+      }
+
+      const mission = { id: newMissionId, tasks };
+
+      // 发送任务
+      websocket.publishMission(mission);
+      const statusParts = [];
+      if (shouldReturnHome) statusParts.push('返航');
+      if (shouldLand) statusParts.push('降落');
+      const statusText = statusParts.length > 0 ? `, 完成后${statusParts.join('+')}` : '';
+      message.success(`🚀 ${displayName} 已启动 (${routeWaypoints.length} 个航点${statusText})`);
+
+      setCurrentExecutingId(newMissionId);
+
+      // 自动执行
+      setTimeout(() => {
+        websocket.publishExecution({ id: newMissionId, action: 0 });
+        message.info('▶️ 任务已开始执行');
+      }, 1000);
+
+    } catch (error) {
+      message.error('执行失败: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * 保存航点到JSON文件
+   */
+  const saveWaypointsToFile = () => {
+    if (waypoints.length === 0) {
+      message.warning('没有航点可保存');
+      return;
+    }
+    const data = JSON.stringify(waypoints, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    link.download = `waypoints_${timestamp}.json`;
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+    message.success(`💾 已保存 ${waypoints.length} 个航点到文件`);
+  };
+
+  /**
+   * 从JSON文件加载航点
+   */
+  const handleFileUpload = (file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const parsed = JSON.parse(e.target.result);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // 确保每个航点有key
+          const waypointsWithKeys = parsed.map((wp, index) => ({
+            ...wp,
+            key: wp.key || Date.now() + index
+          }));
+          setWaypoints(waypointsWithKeys);
+          message.success(`📂 已从文件加载 ${waypointsWithKeys.length} 个航点`);
+        } else {
+          message.error('文件格式错误：需要航点数组');
+        }
+      } catch (err) {
+        message.error('文件解析失败：' + err.message);
+      }
+    };
+    reader.readAsText(file);
+    return false; // 阻止默认上传
+  };
+
+  /**
+   * 更新航点字段（编辑功能）
+   */
+  const handleUpdateWaypoint = (key, field, value) => {
+    const newWaypoints = waypoints.map(wp => {
+      if (wp.key === key) {
+        return { ...wp, [field]: parseFloat(value) || 0 };
+      }
+      return wp;
+    });
+    setWaypoints(newWaypoints);
+  };
 
   /**
    * 起飞 - 通过任务系统发送
@@ -228,9 +418,6 @@ export default function ControlPanel({ odometry }) {
         });
         message.info('▶️ 任务已开始执行');
       }, 1000);
-
-      // 更新下一个任务的ID（用于表单显示）
-      setMissionId('mission_' + Date.now());
     } catch (error) {
       message.error('发送失败: ' + error.message);
     } finally {
@@ -280,43 +467,79 @@ export default function ControlPanel({ odometry }) {
     }
   };
 
-  // 航点表格列定义
+  // 航点表格列定义（可编辑）
   const waypointColumns = [
     {
       title: '#',
       dataIndex: 'key',
       key: 'index',
-      width: 50,
+      width: 40,
       render: (_text, _record, index) => index + 1
     },
     {
-      title: 'X (m)',
+      title: 'X',
       dataIndex: 'x',
       key: 'x',
-      width: 70
+      width: 80,
+      render: (text, record) => (
+        <InputNumber
+          value={text}
+          size="small"
+          step={0.1}
+          style={{ width: '100%' }}
+          onChange={(value) => handleUpdateWaypoint(record.key, 'x', value)}
+        />
+      )
     },
     {
-      title: 'Y (m)',
+      title: 'Y',
       dataIndex: 'y',
       key: 'y',
-      width: 70
+      width: 80,
+      render: (text, record) => (
+        <InputNumber
+          value={text}
+          size="small"
+          step={0.1}
+          style={{ width: '100%' }}
+          onChange={(value) => handleUpdateWaypoint(record.key, 'y', value)}
+        />
+      )
     },
     {
-      title: 'Z (m)',
+      title: 'Z',
       dataIndex: 'z',
       key: 'z',
-      width: 70
+      width: 80,
+      render: (text, record) => (
+        <InputNumber
+          value={text}
+          size="small"
+          step={0.1}
+          style={{ width: '100%' }}
+          onChange={(value) => handleUpdateWaypoint(record.key, 'z', value)}
+        />
+      )
     },
     {
-      title: 'Yaw (rad)',
+      title: 'Yaw',
       dataIndex: 'yaw',
       key: 'yaw',
-      width: 80
+      width: 80,
+      render: (text, record) => (
+        <InputNumber
+          value={text}
+          size="small"
+          step={0.1}
+          style={{ width: '100%' }}
+          onChange={(value) => handleUpdateWaypoint(record.key, 'yaw', value)}
+        />
+      )
     },
     {
-      title: '操作',
+      title: '',
       key: 'action',
-      width: 60,
+      width: 40,
       render: (_text, record) => (
         <Popconfirm
           title="确定删除此航点?"
@@ -359,10 +582,91 @@ export default function ControlPanel({ odometry }) {
           </Button>
         </Space>
 
+        {/* 自由探索模式按钮 */}
+        {presetRoutes.length > 0 && (
+          <Space direction="vertical" style={{ width: '100%' }}>
+            {presetRoutes.map((route, index) => (
+              <Button
+                key={route.id}
+                type="primary"
+                icon={<CompassOutlined />}
+                onClick={() => {
+                  setSelectedRoute({ id: route.id, displayName: `自由探索模式${index + 1}` });
+                  setConfirmModalVisible(true);
+                }}
+                loading={loading}
+                style={{ background: '#722ed1', borderColor: '#722ed1' }}
+                block
+              >
+                自由探索模式{index + 1}
+              </Button>
+            ))}
+          </Space>
+        )}
+
+        {/* 确认执行弹窗 */}
+        <Modal
+          title="确认执行"
+          open={confirmModalVisible}
+          onOk={() => {
+            if (selectedRoute) {
+              handleExecutePresetRoute(selectedRoute.id, selectedRoute.displayName, confirmReturnHome, confirmLand);
+            }
+            setConfirmModalVisible(false);
+          }}
+          onCancel={() => setConfirmModalVisible(false)}
+          okText="确认执行"
+          cancelText="取消"
+        >
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <div style={{ fontSize: 16, marginBottom: 12 }}>
+              是否执行 <strong>{selectedRoute?.displayName}</strong>？
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span>返航：</span>
+              <Switch
+                checked={confirmReturnHome}
+                onChange={setConfirmReturnHome}
+                checkedChildren="是"
+                unCheckedChildren="否"
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span>降落：</span>
+              <Switch
+                checked={confirmLand}
+                onChange={setConfirmLand}
+                checkedChildren="是"
+                unCheckedChildren="否"
+              />
+            </div>
+          </Space>
+        </Modal>
+
         {/* 任务面板 */}
         <Collapse defaultActiveKey={['1']}>
           <Panel header="🛤️ 多航点任务规划" key="1">
-            {/* 航点列表 */}
+            {/* 保存/加载文件按钮 */}
+            <Space style={{ width: '100%', marginBottom: 12 }}>
+              <Button
+                size="small"
+                icon={<DownloadOutlined />}
+                onClick={saveWaypointsToFile}
+                disabled={waypoints.length === 0}
+              >
+                保存到文件
+              </Button>
+              <Upload
+                accept=".json"
+                showUploadList={false}
+                beforeUpload={handleFileUpload}
+              >
+                <Button size="small" icon={<UploadOutlined />}>
+                  从文件加载
+                </Button>
+              </Upload>
+            </Space>
+
             {waypoints.length > 0 && (
               <>
                 <Table
@@ -373,7 +677,7 @@ export default function ControlPanel({ odometry }) {
                   style={{ marginBottom: 12 }}
                   scroll={{ y: 200 }}
                 />
-                <Space style={{ width: '100%', marginBottom: 12 }}>
+                <Space style={{ width: '100%', marginBottom: 12 }} wrap>
                   <Popconfirm
                     title="确定清空所有航点?"
                     onConfirm={handleClearWaypoints}

@@ -8,6 +8,7 @@ class MqttClient {
     this.connected = false;
     this.subscribers = new Set();
     this.explorationCallback = null; // 探索引擎数据回调
+    this.cameraCallback = null; // 摄像头数据回调（用于MJPEG流）
   }
 
   /**
@@ -92,6 +93,16 @@ class MqttClient {
           } else if (topic === '/daf/local/odometry') {
             this.explorationCallback('odometry', data);
           }
+        }
+
+        // 如果有摄像头回调，传递视频帧数据（用于MJPEG流）
+        if (this.cameraCallback && topic === '/daf/camera' && data && data.data) {
+          this.cameraCallback(data.data);
+        }
+
+        // 如果有任务回执回调，传递任务回执数据
+        if (this.missionReceiptCallback && topic === '/daf/mission/receipt') {
+          this.missionReceiptCallback(data);
         }
 
         // 日志已关闭 - 避免刷屏
@@ -197,6 +208,20 @@ class MqttClient {
    */
   setExplorationCallback(callback) {
     this.explorationCallback = callback;
+  }
+
+  /**
+   * 设置摄像头数据回调（用于MJPEG流）
+   */
+  setCameraCallback(callback) {
+    this.cameraCallback = callback;
+  }
+
+  /**
+   * 设置任务回执回调（用于任务记录）
+   */
+  setMissionReceiptCallback(callback) {
+    this.missionReceiptCallback = callback;
   }
 }
 

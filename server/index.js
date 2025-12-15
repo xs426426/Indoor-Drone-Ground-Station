@@ -3,10 +3,15 @@ const http = require('http');
 const WebSocket = require('ws');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const config = require('./config');
 const mqttClient = require('./mqtt-client');
 const protoHandler = require('./proto-handler');
 const ExplorationEngine = require('./exploration-engine');
+const MissionRecorder = require('./mission-recorder');
+
+// 预设航线数据文件路径
+const PRESET_ROUTES_FILE = path.join(__dirname, 'data', 'preset-routes.json');
 
 const app = express();
 const server = http.createServer(app);
@@ -14,6 +19,9 @@ const wss = new WebSocket.Server({ server });
 
 // 创建探索引擎实例（先声明，启动后初始化）
 let explorationEngine = null;
+
+// 创建任务记录器实例
+const missionRecorder = new MissionRecorder();
 
 // 运行模式检测（检测是否有模拟器在同一broker上运行）
 const DRONE_MODE = process.env.DRONE_MODE || 'auto'; // 'real', 'simulator', 'auto'
@@ -63,6 +71,225 @@ app.post('/api/command', (req, res) => {
   try {
     mqttClient.publishCommand(req.body);
     res.json({ success: true, message: '指令已发送' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ========== MJPEG视频流 ==========
+// 存储MJPEG流客户端
+const mjpegClients = new Set();
+let latestFrame = null;
+
+// MJPEG流端点
+app.get('/api/mjpeg', (req, res) => {
+  console.log('📹 MJPEG客户端连接');
+
+  res.setHeader('Content-Type', 'multipart/x-mixed-replace; boundary=frame');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  mjpegClients.add(res);
+
+  // 如果有最新帧，立即发送
+  if (latestFrame) {
+    sendMjpegFrame(res, latestFrame);
+  }
+
+  req.on('close', () => {
+    console.log('📹 MJPEG客户端断开');
+    mjpegClients.delete(res);
+  });
+});
+
+// 发送MJPEG帧
+function sendMjpegFrame(res, frameData) {
+  try {
+    const buffer = Buffer.from(frameData, 'base64');
+    res.write('--frame\r\n');
+    res.write('Content-Type: image/jpeg\r\n');
+    res.write(`Content-Length: ${buffer.length}\r\n\r\n`);
+    res.write(buffer);
+    res.write('\r\n');
+  } catch (e) {
+    // 客户端可能已断开
+  }
+}
+
+// 广播帧到所有MJPEG客户端
+function broadcastMjpegFrame(frameData) {
+  latestFrame = frameData;
+  mjpegClients.forEach(client => {
+    sendMjpegFrame(client, frameData);
+  });
+}
+
+// ========== 预设航线API ==========
+
+// 获取所有预设航线列表
+app.get('/api/preset-routes', (req, res) => {
+  try {
+    if (!fs.existsSync(PRESET_ROUTES_FILE)) {
+      return res.json({ success: true, routes: {} });
+    }
+    const data = JSON.parse(fs.readFileSync(PRESET_ROUTES_FILE, 'utf-8'));
+    // 返回航线列表（不包含完整航点数据，只返回名称和描述）
+    const routeList = {};
+    for (const [key, value] of Object.entries(data)) {
+      routeList[key] = {
+        name: value.name,
+        description: value.description,
+        waypointCount: value.waypoints?.length || 0
+      };
+    }
+    res.json({ success: true, routes: routeList });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 获取指定预设航线的详细数据
+app.get('/api/preset-routes/:routeId', (req, res) => {
+  try {
+    const { routeId } = req.params;
+    if (!fs.existsSync(PRESET_ROUTES_FILE)) {
+      return res.status(404).json({ success: false, error: '航线不存在' });
+    }
+    const data = JSON.parse(fs.readFileSync(PRESET_ROUTES_FILE, 'utf-8'));
+    if (!data[routeId]) {
+      return res.status(404).json({ success: false, error: '航线不存在' });
+    }
+    res.json({ success: true, route: data[routeId] });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 保存/更新预设航线
+app.post('/api/preset-routes/:routeId', (req, res) => {
+  try {
+    const { routeId } = req.params;
+    const { name, description, waypoints } = req.body;
+
+    // 确保data目录存在
+    const dataDir = path.dirname(PRESET_ROUTES_FILE);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+
+    // 读取现有数据
+    let data = {};
+    if (fs.existsSync(PRESET_ROUTES_FILE)) {
+      data = JSON.parse(fs.readFileSync(PRESET_ROUTES_FILE, 'utf-8'));
+    }
+
+    // 更新航线
+    data[routeId] = {
+      name: name || routeId,
+      description: description || '',
+      waypoints: waypoints || []
+    };
+
+    // 保存
+    fs.writeFileSync(PRESET_ROUTES_FILE, JSON.stringify(data, null, 2), 'utf-8');
+
+    res.json({ success: true, message: '航线已保存' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 删除预设航线
+app.delete('/api/preset-routes/:routeId', (req, res) => {
+  try {
+    const { routeId } = req.params;
+    if (!fs.existsSync(PRESET_ROUTES_FILE)) {
+      return res.status(404).json({ success: false, error: '航线不存在' });
+    }
+    const data = JSON.parse(fs.readFileSync(PRESET_ROUTES_FILE, 'utf-8'));
+    if (!data[routeId]) {
+      return res.status(404).json({ success: false, error: '航线不存在' });
+    }
+    delete data[routeId];
+    fs.writeFileSync(PRESET_ROUTES_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    res.json({ success: true, message: '航线已删除' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ========== 任务记录API ==========
+
+// 获取任务记录列表
+app.get('/api/missions', (req, res) => {
+  try {
+    const missions = missionRecorder.getMissionList();
+    res.json({ success: true, missions, total: missions.length });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 获取任务记录详情（包含轨迹和点云数据）
+app.get('/api/missions/:timestamp', (req, res) => {
+  try {
+    const result = missionRecorder.getMissionDetail(req.params.timestamp);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 获取任务视频帧列表
+app.get('/api/missions/:timestamp/frames', (req, res) => {
+  try {
+    const result = missionRecorder.getMissionFrames(req.params.timestamp);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 获取单个视频帧
+app.get('/api/missions/:timestamp/frames/:filename', (req, res) => {
+  try {
+    const frame = missionRecorder.getFrame(req.params.timestamp, req.params.filename);
+    if (frame) {
+      res.setHeader('Content-Type', 'image/jpeg');
+      res.send(frame);
+    } else {
+      res.status(404).json({ success: false, error: '帧不存在' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 删除任务记录
+app.delete('/api/missions/:timestamp', (req, res) => {
+  try {
+    const result = missionRecorder.deleteMission(req.params.timestamp);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 获取当前记录状态
+app.get('/api/missions/recording/status', (req, res) => {
+  try {
+    const status = missionRecorder.getRecordingStatus();
+    res.json({ success: true, ...status });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 手动停止记录
+app.post('/api/missions/recording/stop', (req, res) => {
+  try {
+    const result = missionRecorder.stopRecording();
+    res.json(result);
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -276,11 +503,23 @@ async function handleWebSocketMessage(ws, data) {
 
     case 'publish_mission':
       console.log('📋 发布任务:', payload);
+      // 启动任务记录
+      if (payload && payload.id) {
+        const waypointCount = payload.tasks ? payload.tasks.filter(t => t.autoPilot).length : 0;
+        missionRecorder.startRecording(payload.id, {
+          waypoints: payload.tasks,
+          waypointCount
+        });
+      }
       mqttClient.publishMission(payload);
       break;
 
     case 'publish_execution':
       console.log('▶️ 发布执行指令:', payload);
+      // 如果是停止任务，停止记录
+      if (payload && payload.action === 'STOP') {
+        missionRecorder.stopRecording();
+      }
       mqttClient.publishExecution(payload);
       break;
 
@@ -465,18 +704,50 @@ async function start() {
       });
     });
 
-    // 5. 连接MQTT数据到探索引擎（通过回调）
+    // 5. 连接MQTT数据到探索引擎和任务记录器（通过回调）
     mqttClient.setExplorationCallback((dataType, data) => {
-      if (!explorationEngine) return;
+      // 探索引擎处理
+      if (explorationEngine) {
+        if (dataType === 'pointcloud') {
+          explorationEngine.onPointCloudReceived(data);
+        } else if (dataType === 'odometry') {
+          explorationEngine.onOdometryReceived(data);
+        }
+      }
 
-      if (dataType === 'pointcloud') {
-        explorationEngine.onPointCloudReceived(data);
-      } else if (dataType === 'odometry') {
-        explorationEngine.onOdometryReceived(data);
+      // 任务记录器处理
+      if (missionRecorder.isRecording) {
+        if (dataType === 'pointcloud') {
+          missionRecorder.recordPointCloud(data);
+        } else if (dataType === 'odometry') {
+          missionRecorder.recordTrajectory(data);
+        }
       }
     });
 
-    // 6. 启动 HTTP + WebSocket 服务器
+    // 6. 连接MQTT摄像头数据到MJPEG流和任务记录器
+    mqttClient.setCameraCallback((frameData) => {
+      broadcastMjpegFrame(frameData);
+
+      // 任务记录器保存视频帧
+      if (missionRecorder.isRecording) {
+        missionRecorder.recordVideoFrame(frameData);
+      }
+    });
+
+    // 7. 连接MQTT任务回执到任务记录器（任务完成时自动停止记录）
+    mqttClient.setMissionReceiptCallback((receiptData) => {
+      console.log('📋 收到任务回执:', receiptData);
+      // 当任务完成（状态为COMPLETED或STOPPED）时，停止记录
+      if (receiptData && (receiptData.status === 'COMPLETED' || receiptData.status === 'STOPPED' || receiptData.status === 2 || receiptData.status === 3)) {
+        if (missionRecorder.isRecording) {
+          console.log('📹 任务完成，停止记录');
+          missionRecorder.stopRecording();
+        }
+      }
+    });
+
+    // 8. 启动 HTTP + WebSocket 服务器
     server.listen(config.http.port, () => {
       console.log('');
       console.log('✅ 服务器启动成功!');
