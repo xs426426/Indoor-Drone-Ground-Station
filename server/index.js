@@ -107,6 +107,19 @@ app.post('/api/command', (req, res) => {
 const mjpegClients = new Set();
 let latestFrame = null;
 
+// 单帧快照端点（供Agent视觉分析使用）
+app.get('/api/camera/snapshot', (req, res) => {
+  if (latestFrame) {
+    // 返回原始JPEG图像
+    const buffer = Buffer.from(latestFrame, 'base64');
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
+  } else {
+    res.status(404).json({ success: false, error: '无可用的摄像头画面' });
+  }
+});
+
 // MJPEG流端点
 app.get('/api/mjpeg', (req, res) => {
   console.log('📹 MJPEG客户端连接');
