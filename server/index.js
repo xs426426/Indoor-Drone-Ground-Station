@@ -20,6 +20,15 @@ const wss = new WebSocket.Server({ server });
 // 创建探索引擎实例（先声明，启动后初始化）
 let explorationEngine = null;
 
+// 缓存最新的无人机位姿数据（供REST API查询）
+let latestOdometry = {
+  position: { x: 0, y: 0, z: 0 },
+  orientation: { x: 0, y: 0, z: 0, w: 1 },
+  velocity: { x: 0, y: 0, z: 0 },
+  timestamp: null,
+  lastUpdate: null
+};
+
 // 创建任务记录器实例
 const missionRecorder = new MissionRecorder();
 
@@ -43,6 +52,23 @@ app.get('/api/status', (req, res) => {
     mode: DRONE_MODE,
     modeDescription: DRONE_MODE === 'real' ? '实机模式' :
                      DRONE_MODE === 'simulator' ? '模拟器模式' : '自动检测'
+  });
+});
+
+// 获取无人机当前位置和姿态（Agent调用）
+app.get('/api/drone/odometry', (req, res) => {
+  const now = Date.now();
+  const dataAge = latestOdometry.lastUpdate ? (now - latestOdometry.lastUpdate) / 1000 : null;
+
+  res.json({
+    success: true,
+    position: latestOdometry.position,
+    orientation: latestOdometry.orientation,
+    velocity: latestOdometry.velocity,
+    timestamp: latestOdometry.timestamp,
+    lastUpdate: latestOdometry.lastUpdate,
+    dataAge: dataAge,  // 数据年龄（秒），用于判断数据是否过时
+    isStale: dataAge === null || dataAge > 5  // 超过5秒认为数据过时
   });
 });
 
@@ -713,6 +739,25 @@ async function start() {
         } else if (dataType === 'odometry') {
           explorationEngine.onOdometryReceived(data);
         }
+      }
+
+      // 缓存最新的位姿数据（供REST API查询）
+      if (dataType === 'odometry' && data) {
+        const pos = data.pose?.position || data.position;
+        const orient = data.pose?.orientation || data.orientation;
+        const vel = data.velocity || data.twist?.linear;
+
+        if (pos) {
+          latestOdometry.position = { x: pos.x || 0, y: pos.y || 0, z: pos.z || 0 };
+        }
+        if (orient) {
+          latestOdometry.orientation = { x: orient.x || 0, y: orient.y || 0, z: orient.z || 0, w: orient.w || 1 };
+        }
+        if (vel) {
+          latestOdometry.velocity = { x: vel.x || 0, y: vel.y || 0, z: vel.z || 0 };
+        }
+        latestOdometry.timestamp = data.stamp || data.header?.stamp;
+        latestOdometry.lastUpdate = Date.now();
       }
 
       // 任务记录器处理
